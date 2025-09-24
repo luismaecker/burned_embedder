@@ -16,6 +16,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License"
 ]
 requires-python = "~=3.12.0"
+dependencies = [
+    "cubo>=2024.8.0",
+    "ipykernel>=6.30.1",
+    "lexcube>=1.0.3",
+    "rootutils>=1.0.7",
+    "torchgeo>=0.7.1",
+]
 
 
 [tool.ruff]

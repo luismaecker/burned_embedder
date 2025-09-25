@@ -79,13 +79,13 @@ def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31"):
     
     return da_s1_clean
 
-def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31"):
+def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B09","B11","B12"]):
     """Load and clean Sentinel-2 data with automatic baseline correction"""
     print("Loading Sentinel-2 data...")
     da_s2 = cubo.create(
         lat=lat, lon=lon,
         collection="sentinel-2-l2a",
-        bands=["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B09","B11","B12"],
+        bands=bands,
         start_date=start_date, end_date=end_date,
         edge_size=128, resolution=10,
         query={"eo:cloud_cover": {"lt": 2}}

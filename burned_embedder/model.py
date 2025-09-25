@@ -59,8 +59,8 @@ def process_batch_unified(encoder, da_s1_batch, da_s2_batch, acquisition_dates_b
     reference_date = datetime(1970, 1, 1)
     time_deltas = [(date - reference_date).days for date in acquisition_dates_batch]
     
-    # Create batch metadata tensor
-    metadata_list = [[lon, lat, float(time_delta), config.AREA] for time_delta in time_deltas]
+    # Create batch metadata tensor #TODO: add time index back
+    metadata_list = [[lon, lat, torch.nan, config.AREA] for time_delta in time_deltas]
     metadata = torch.tensor(metadata_list, dtype=torch.float32, device=device)
     
     # Forward pass
@@ -79,44 +79,89 @@ def process_embeddings_batched(encoder, da_s1, da_s2, timestamp_pairs, mode='com
         default_batch_sizes = {'s1_only': 64, 's2_only': 32, 'combined': 16}
         batch_size = default_batch_sizes[mode]
     
-    print(f"Processing {len(timestamp_pairs)} timesteps for {mode} mode with batch size {batch_size}...")
-    
-    embeddings_list = []
-    ndvi_list = []
-    dates_list = []
-    
-    # Process in batches
-    for i in tqdm(range(0, len(timestamp_pairs), batch_size)):
-        batch_pairs = timestamp_pairs[i:i+batch_size]
+    # For s1_only mode, use ALL S1 timesteps instead of just matched pairs
+    if mode == 's1_only':
+        num_timesteps = len(da_s1.time)
+        print(f"Processing {num_timesteps} timesteps for {mode} mode with batch size {batch_size}...")
         
-        # Prepare batch data
-        da_s2_batch = [da_s2.isel(time=s2_idx) for s2_idx, s1_idx in batch_pairs]
-        da_s1_batch = [da_s1.isel(time=s1_idx) for s2_idx, s1_idx in batch_pairs]
-        acquisition_dates_batch = [pd.to_datetime(da_s2.time.values[s2_idx]).to_pydatetime() 
-                                 for s2_idx, s1_idx in batch_pairs]
+        embeddings_list = []
+        ndvi_list = []
+        dates_list = []
         
-        try:
-            # Process batch
-            batch_embeddings = process_batch_unified(encoder, da_s1_batch, da_s2_batch, 
-                                                   acquisition_dates_batch, mode, device, 
-                                                   lon, lat)
+        # Process all S1 timesteps in batches
+        for i in tqdm(range(0, num_timesteps, batch_size)):
+            batch_end = min(i + batch_size, num_timesteps)
+            batch_indices = list(range(i, batch_end))
             
-            # Calculate NDVI and dates for batch
-            batch_ndvi = [calculate_ndvi(da_s2_t) for da_s2_t in da_s2_batch]
-            batch_dates = [da_s2.time.values[s2_idx] for s2_idx, s1_idx in batch_pairs]
+            # Prepare batch data using S1 indices only
+            da_s1_batch = [da_s1.isel(time=idx) for idx in batch_indices]
+            da_s2_batch = [None] * len(batch_indices)  # Not used for s1_only
+            acquisition_dates_batch = [pd.to_datetime(da_s1.time.values[idx]).to_pydatetime() 
+                                     for idx in batch_indices]
             
-            # Collect results (including potential NaN embeddings)
-            embeddings_list.extend(batch_embeddings)
-            ndvi_list.extend(batch_ndvi)
-            dates_list.extend(batch_dates)
+            try:
+                # Process batch
+                batch_embeddings = process_batch_unified(encoder, da_s1_batch, da_s2_batch, 
+                                                       acquisition_dates_batch, mode, device, 
+                                                       lon, lat)
+                
+                # For s1_only mode, we can't calculate NDVI (no S2 data), so use dummy values
+                batch_ndvi = [np.nan] * len(batch_indices)
+                batch_dates = [da_s1.time.values[idx] for idx in batch_indices]
+                
+                # Collect results
+                embeddings_list.extend(batch_embeddings)
+                ndvi_list.extend(batch_ndvi)
+                dates_list.extend(batch_dates)
+                
+            except RuntimeError as e:
+                if "out of memory" in str(e):
+                    print(f"GPU OOM with batch size {len(batch_indices)}. Try reducing batch_size parameter.")
+                    torch.cuda.empty_cache()
+                    raise e
+                else:
+                    raise e
+    
+    else:
+        # Original logic for s2_only and combined modes
+        print(f"Processing {len(timestamp_pairs)} timesteps for {mode} mode with batch size {batch_size}...")
+        
+        embeddings_list = []
+        ndvi_list = []
+        dates_list = []
+        
+        # Process in batches
+        for i in tqdm(range(0, len(timestamp_pairs), batch_size)):
+            batch_pairs = timestamp_pairs[i:i+batch_size]
             
-        except RuntimeError as e:
-            if "out of memory" in str(e):
-                print(f"GPU OOM with batch size {len(batch_pairs)}. Try reducing batch_size parameter.")
-                torch.cuda.empty_cache()
-                raise e
-            else:
-                raise e
+            # Prepare batch data
+            da_s2_batch = [da_s2.isel(time=s2_idx) for s2_idx, s1_idx in batch_pairs]
+            da_s1_batch = [da_s1.isel(time=s1_idx) for s2_idx, s1_idx in batch_pairs]
+            acquisition_dates_batch = [pd.to_datetime(da_s2.time.values[s2_idx]).to_pydatetime() 
+                                     for s2_idx, s1_idx in batch_pairs]
+            
+            try:
+                # Process batch
+                batch_embeddings = process_batch_unified(encoder, da_s1_batch, da_s2_batch, 
+                                                       acquisition_dates_batch, mode, device, 
+                                                       lon, lat)
+                
+                # Calculate NDVI and dates for batch
+                batch_ndvi = [calculate_ndvi(da_s2_t) for da_s2_t in da_s2_batch]
+                batch_dates = [da_s2.time.values[s2_idx] for s2_idx, s1_idx in batch_pairs]
+                
+                # Collect results (including potential NaN embeddings)
+                embeddings_list.extend(batch_embeddings)
+                ndvi_list.extend(batch_ndvi)
+                dates_list.extend(batch_dates)
+                
+            except RuntimeError as e:
+                if "out of memory" in str(e):
+                    print(f"GPU OOM with batch size {len(batch_pairs)}. Try reducing batch_size parameter.")
+                    torch.cuda.empty_cache()
+                    raise e
+                else:
+                    raise e
     
     # Convert to arrays
     embeddings_array = np.vstack(embeddings_list)

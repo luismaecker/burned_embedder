@@ -4,6 +4,7 @@
 # reports for now
 /reports/figures/*
 
+/models/*
 
 # Mac OS-specific storage files
 .DS_Store

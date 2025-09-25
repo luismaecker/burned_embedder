@@ -1,10 +1,17 @@
 from datetime import datetime
+import sys
+
 import numpy as np
-import torch
 import rootutils
+
 from burned_embedder import utils
 from burned_embedder.data import find_closest_timestamps, load_s1, load_s2
 from burned_embedder.model import load_model, process_embeddings_batched
+
+# Add TerraFM to Python path
+# TODO: Update this path to where you put terrafm.py
+
+sys.path.append('models/terrafm_models')
 
 root_path = rootutils.find_root()
 
@@ -13,7 +20,7 @@ device = utils.setup_device(gpu_index=1, memory_fraction=1.0)
 print(f"Using device: {device}")
 
 # Create output directory
-embeddings_dir = root_path / "data" / "embeddings" / "dueben_fire_notime_2"
+embeddings_dir = root_path / "data" / "embeddings" / "dueben_fire_notime_2_terrafm"
 embeddings_dir.mkdir(parents=True, exist_ok=True)
 
 # Constants
@@ -25,8 +32,8 @@ start_date = "2017-01-01"
 end_date = "2025-12-31"
 
 def main():
-    """Generate and save embeddings for all modes"""
-    print("Starting Dueben Fire Embedding Generation")
+    """Generate and save embeddings for all modes using TerraFM"""
+    print("Starting Dueben Fire Embedding Generation with TerraFM")
     print("=" * 50)
     
     # Load data
@@ -41,11 +48,13 @@ def main():
         print("No matching timestamps found. Exiting.")
         return
     
-    # Load model
-    encoder = load_model(device)
+    # Load TerraFM model
+    # TODO: Update this path to point to your downloaded TerraFM weights
+    weights_path = "models/terrafm_models/TerraFM-B.pth"  # Update this path
+    encoder = load_model(device, model_size='base', weights_path=weights_path)
     
     # Process embeddings for each mode
-    modes = ['s1_only', 's2_only', 'combined']
+    modes = ['s1_only', 's2_only']
     
     for mode in modes:
         print(f"\n{'='*20} Processing {mode.upper()} Mode {'='*20}")

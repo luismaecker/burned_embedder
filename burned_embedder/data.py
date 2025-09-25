@@ -67,7 +67,7 @@ def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31"):
         collection="sentinel-1-rtc",
         bands=["vv", "vh"],
         start_date=start_date, end_date=end_date,
-        edge_size=128, resolution=10,
+        edge_size=100, resolution=10,
        # query={"sat:orbit_state": {"eq": "ascending"}}
 
     )
@@ -87,7 +87,7 @@ def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B0
         collection="sentinel-2-l2a",
         bands=bands,
         start_date=start_date, end_date=end_date,
-        edge_size=128, resolution=10,
+        edge_size=100, resolution=10,
         query={"eo:cloud_cover": {"lt": 2}}
     )
 

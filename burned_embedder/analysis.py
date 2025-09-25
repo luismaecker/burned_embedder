@@ -17,16 +17,20 @@ def calculate_ndvi(da_s2_t):
 
 
 def perform_dimensionality_reduction(embeddings_array):
-    """Apply PCA and t-SNE to embeddings"""
+    """Apply PCA and t-SNE to embeddings (assumes clean input)"""
+    print(f"Embedding shape: {embeddings_array.shape}")
+    
     # PCA
-    pca = PCA(n_components=min(10, len(embeddings_array)-1))
+    n_components = min(10, len(embeddings_array)-1, embeddings_array.shape[1])
+    pca = PCA(n_components=n_components)
     embeddings_pca = pca.fit_transform(embeddings_array)
     
     # t-SNE
     has_tsne = False
     embeddings_tsne = None
     if len(embeddings_array) > 5:
-        tsne = TSNE(n_components=2, random_state=42, perplexity=min(5, len(embeddings_array)-1))
+        perplexity = min(5, len(embeddings_array)-1, 30)
+        tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity)
         embeddings_tsne = tsne.fit_transform(embeddings_array)
         has_tsne = True
     
@@ -40,7 +44,6 @@ def analyze_fire_detection(embeddings_array, dates_array, ndvi_array, mode, save
     """Comprehensive fire detection analysis"""
     print(f"Analyzing fire detection for {mode} mode...")
     
-    # Get dimensionality reduction
     pca, embeddings_pca, embeddings_tsne, has_tsne = perform_dimensionality_reduction(embeddings_array)
     
     # Convert dates

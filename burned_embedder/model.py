@@ -6,6 +6,7 @@ import torch
 from torchgeo.models import CopernicusFM_Base_Weights, copernicusfm_base
 from tqdm import tqdm
 
+from burned_embedder import config
 from burned_embedder.analysis import calculate_ndvi
 
 
@@ -18,106 +19,125 @@ def load_model(device):
     return encoder
 
 
-def process_s1_only(encoder, da_s1_t, acquisition_date, device, lon, lat, area, kernel_size, s1_wavelengths, s1_bandwidths):
-    """Process S1-only data through the model"""
-    s1_data = np.array(da_s1_t)  # Shape: (2, H, W)
-    x = torch.from_numpy(s1_data).float().unsqueeze(0).to(device)
+def process_batch_unified(encoder, da_s1_batch, da_s2_batch, acquisition_dates_batch, mode, device, lon, lat):
+    """Unified batch processing function that handles all modes"""
     
-    # Calculate time delta in days since 1970-01-01
+    # Prepare data based on mode
+    if mode == 's1_only':
+        # Only use S1 data
+        s1_data_list = [np.array(da_s1_t) for da_s1_t in da_s1_batch]
+        data_batch = np.stack(s1_data_list, axis=0)  # Shape: (batch_size, 2, H, W)
+        wavelengths = config.S1_WAVELENGTHS
+        bandwidths = config.S1_BANDWIDTHS
+        
+    elif mode == 's2_only':
+        # Only use S2 data
+        s2_data_list = [da_s2_t.values for da_s2_t in da_s2_batch]
+        data_batch = np.stack(s2_data_list, axis=0)  # Shape: (batch_size, 13, H, W)
+        wavelengths = config.S2_WAVELENGTHS
+        bandwidths = config.S2_BANDWIDTHS
+        
+    elif mode == 'combined':
+        # Combine S1 and S2 data
+        s1_data_list = [np.array(da_s1_t) for da_s1_t in da_s1_batch]
+        s2_data_list = [da_s2_t.values for da_s2_t in da_s2_batch]
+        
+        s1_batch = np.stack(s1_data_list, axis=0)  # Shape: (batch_size, 2, H, W)
+        s2_batch = np.stack(s2_data_list, axis=0)  # Shape: (batch_size, 13, H, W)
+        
+        data_batch = np.concatenate([s1_batch, s2_batch], axis=1)  # Shape: (batch_size, 15, H, W)
+        wavelengths = config.S1_WAVELENGTHS + config.S2_WAVELENGTHS
+        bandwidths = config.S1_BANDWIDTHS + config.S2_BANDWIDTHS
+        
+    else:
+        raise ValueError("Mode must be 's1_only', 's2_only', or 'combined'")
+    
+    # Convert to tensor
+    x = torch.from_numpy(data_batch).float().to(device)
+    
+    # Calculate time deltas for all dates
     reference_date = datetime(1970, 1, 1)
-    time_delta_days = (acquisition_date - reference_date).days
+    time_deltas = [(date - reference_date).days for date in acquisition_dates_batch]
     
-    # Create metadata tensor: [lon, lat, time_delta_days, area_km2]
-    metadata = torch.tensor([[lon, lat, float(time_delta_days), area]], 
-                           dtype=torch.float32, device=device)
+    # Create batch metadata tensor
+    metadata_list = [[lon, lat, float(time_delta), config.AREA] for time_delta in time_deltas]
+    metadata = torch.tensor(metadata_list, dtype=torch.float32, device=device)
     
+    # Forward pass
     with torch.no_grad():
-        embedding = encoder(x, metadata, wavelengths=s1_wavelengths, 
-                          bandwidths=s1_bandwidths, language_embed=None, 
-                          input_mode='spectral', kernel_size=kernel_size)
+        embeddings = encoder(x, metadata, wavelengths=wavelengths, 
+                           bandwidths=bandwidths, language_embed=None, 
+                           input_mode='spectral', kernel_size=config.KERNEL_SIZE)
     
-    return embedding.cpu().numpy().flatten()
+    return embeddings.cpu().numpy()
 
-
-def process_s2_only(encoder, da_s2_t, acquisition_date, device, lon, lat, area, kernel_size, s2_wavelengths, s2_bandwidths):
-    """Process S2-only data through the model"""
-    s2_data = da_s2_t.values  # Shape: (13, H, W) - make sure you have all 13 bands
-    x = torch.from_numpy(s2_data).float().unsqueeze(0).to(device)
+def process_embeddings_batched(encoder, da_s1, da_s2, timestamp_pairs, mode='combined', batch_size=None, device=None, lon=None, lat=None):
+    """Process embeddings in batches and filter out NaN results"""
     
-    # Calculate time delta in days since 1970-01-01
-    reference_date = datetime(1970, 1, 1)
-    time_delta_days = (acquisition_date - reference_date).days
+    # Set default batch sizes based on mode
+    if batch_size is None:
+        default_batch_sizes = {'s1_only': 64, 's2_only': 32, 'combined': 16}
+        batch_size = default_batch_sizes[mode]
     
-    # Create metadata tensor: [lon, lat, time_delta_days, area_km2]
-    metadata = torch.tensor([[lon, lat, float(time_delta_days), area]], 
-                           dtype=torch.float32, device=device)
-    
-    with torch.no_grad():
-        embedding = encoder(x, metadata, wavelengths=s2_wavelengths, 
-                          bandwidths=s2_bandwidths, language_embed=None, 
-                          input_mode='spectral', kernel_size=kernel_size)
-    
-    return embedding.cpu().numpy().flatten()
-
-
-def process_combined(encoder, da_s1_t, da_s2_t, acquisition_date, device, lon, lat, area, kernel_size, s1_wavelengths, s1_bandwidths, s2_wavelengths, s2_bandwidths):
-    """Process combined S1+S2 data through the model"""
-    s1_data = np.array(da_s1_t)  # Shape: (2, H, W)
-    s2_data = da_s2_t.values     # Shape: (13, H, W) - make sure you have all 13 bands
-    
-    # Concatenate along channel dimension
-    combined_data = np.concatenate([s1_data, s2_data], axis=0)  # Shape: (15, H, W)
-    x = torch.from_numpy(combined_data).float().unsqueeze(0).to(device)
-    
-    # Calculate time delta in days since 1970-01-01
-    reference_date = datetime(1970, 1, 1)
-    time_delta_days = (acquisition_date - reference_date).days
-    
-    # Create metadata tensor: [lon, lat, time_delta_days, area_km2]
-    metadata = torch.tensor([[lon, lat, float(time_delta_days), area]], 
-                           dtype=torch.float32, device=device)
-    
-    # Combined wavelengths and bandwidths for 15 bands (2 S1 + 13 S2)
-    combined_wavelengths = s1_wavelengths + s2_wavelengths
-    combined_bandwidths = s1_bandwidths + s2_bandwidths
-    
-    with torch.no_grad():
-        embedding = encoder(x, metadata, wavelengths=combined_wavelengths, 
-                          bandwidths=combined_bandwidths, language_embed=None, 
-                          input_mode='spectral', kernel_size=kernel_size)
-    
-    return embedding.cpu().numpy().flatten()
-
-
-def process_embeddings(encoder, da_s1, da_s2, timestamp_pairs, mode='combined', device=None, lon=None, lat=None, area=None, kernel_size=None, **spectral_params):
-    """Process embeddings for specified mode"""
-    print(f"Processing {len(timestamp_pairs)} timesteps for {mode} mode...")
+    print(f"Processing {len(timestamp_pairs)} timesteps for {mode} mode with batch size {batch_size}...")
     
     embeddings_list = []
     ndvi_list = []
     dates_list = []
     
-    for s2_idx, s1_idx in tqdm(timestamp_pairs):
-        da_s2_t = da_s2.isel(time=s2_idx)
-        da_s1_t = da_s1.isel(time=s1_idx)
-        acquisition_date = pd.to_datetime(da_s2.time.values[s2_idx]).to_pydatetime()
+    # Process in batches
+    for i in tqdm(range(0, len(timestamp_pairs), batch_size)):
+        batch_pairs = timestamp_pairs[i:i+batch_size]
         
-        # Get embedding based on mode
-        if mode == 's1_only':
-            embedding = process_s1_only(encoder, da_s1_t, acquisition_date, device, lon, lat, area, kernel_size, 
-                                      spectral_params['s1_wavelengths'], spectral_params['s1_bandwidths'])
-        elif mode == 's2_only':
-            embedding = process_s2_only(encoder, da_s2_t, acquisition_date, device, lon, lat, area, kernel_size,
-                                      spectral_params['s2_wavelengths'], spectral_params['s2_bandwidths'])
-        elif mode == 'combined':
-            embedding = process_combined(encoder, da_s1_t, da_s2_t, acquisition_date, device, lon, lat, area, kernel_size,
-                                       spectral_params['s1_wavelengths'], spectral_params['s1_bandwidths'],
-                                       spectral_params['s2_wavelengths'], spectral_params['s2_bandwidths'])
-        else:
-            raise ValueError("Mode must be 's1_only', 's2_only', or 'combined'")
+        # Prepare batch data
+        da_s2_batch = [da_s2.isel(time=s2_idx) for s2_idx, s1_idx in batch_pairs]
+        da_s1_batch = [da_s1.isel(time=s1_idx) for s2_idx, s1_idx in batch_pairs]
+        acquisition_dates_batch = [pd.to_datetime(da_s2.time.values[s2_idx]).to_pydatetime() 
+                                 for s2_idx, s1_idx in batch_pairs]
         
-        embeddings_list.append(embedding)
-        ndvi_list.append(calculate_ndvi(da_s2_t))
-        dates_list.append(da_s2.time.values[s2_idx])
+        try:
+            # Process batch
+            batch_embeddings = process_batch_unified(encoder, da_s1_batch, da_s2_batch, 
+                                                   acquisition_dates_batch, mode, device, 
+                                                   lon, lat)
+            
+            # Calculate NDVI and dates for batch
+            batch_ndvi = [calculate_ndvi(da_s2_t) for da_s2_t in da_s2_batch]
+            batch_dates = [da_s2.time.values[s2_idx] for s2_idx, s1_idx in batch_pairs]
+            
+            # Collect results (including potential NaN embeddings)
+            embeddings_list.extend(batch_embeddings)
+            ndvi_list.extend(batch_ndvi)
+            dates_list.extend(batch_dates)
+            
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                print(f"GPU OOM with batch size {len(batch_pairs)}. Try reducing batch_size parameter.")
+                torch.cuda.empty_cache()
+                raise e
+            else:
+                raise e
     
-    return np.vstack(embeddings_list), np.array(ndvi_list), np.array(dates_list)
+    # Convert to arrays
+    embeddings_array = np.vstack(embeddings_list)
+    ndvi_array = np.array(ndvi_list)
+    dates_array = np.array(dates_list)
+    
+    # FILTER OUT NAN EMBEDDINGS
+    valid_mask = ~np.isnan(embeddings_array).any(axis=1)
+    num_invalid = np.sum(~valid_mask)
+    
+    if num_invalid > 0:
+        print(f"Removing {num_invalid} embeddings with NaN values ({num_invalid/len(embeddings_array):.1%})")
+        embeddings_clean = embeddings_array[valid_mask]
+        ndvi_clean = ndvi_array[valid_mask]  
+        dates_clean = dates_array[valid_mask]
+    else:
+        print("No NaN embeddings found")
+        embeddings_clean = embeddings_array
+        ndvi_clean = ndvi_array
+        dates_clean = dates_array
+    
+    print(f"Final dataset: {len(embeddings_clean)} valid samples")
+    
+    return embeddings_clean, ndvi_clean, dates_clean

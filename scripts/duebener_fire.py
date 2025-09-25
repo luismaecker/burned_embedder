@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from burned_embedder import utils
 from burned_embedder.analysis import analyze_fire_detection, compare_modes
 from burned_embedder.data import find_closest_timestamps, load_s1, load_s2
-from burned_embedder.model import load_model, process_embeddings
+from burned_embedder.model import load_model, process_embeddings_batched
 from burned_embedder.plot import create_summary_visualization
 
 root_path = rootutils.find_root()
@@ -25,17 +25,9 @@ figures_dir.mkdir(parents=True, exist_ok=True)
 LON = 13.32200476
 LAT = 51.4222985
 FIRE_DATE = datetime(2025, 7, 3)
-EDGE_SIZE = 128
-RESOLUTION = 10
-KERNEL_SIZE = 16
-AREA = (16 * 10 / 1000) ** 2  # Surface area of one patch in km²
 
-
-# Spectral parameters
-S2_WAVELENGTHS = [440, 490, 560, 665, 705, 740, 783, 842, 860, 940, 1610, 2190]
-S2_BANDWIDTHS = [20, 65, 35, 30, 15, 15, 20, 115, 20, 20, 90, 180]
-S1_WAVELENGTHS = [5e7, 5e7]  
-S1_BANDWIDTHS = [1e9, 1e9]
+start_date = "2017-01-01"
+end_date = "2025-12-31"
 
 
 def main():
@@ -44,8 +36,8 @@ def main():
     print("=" * 50)
     
     # Load data
-    da_s1 = load_s1(LAT, LON)
-    da_s2 = load_s2(LAT, LON)
+    da_s1 = load_s1(LAT, LON, start_date=start_date, end_date=end_date).compute()
+    da_s2 = load_s2(LAT, LON, start_date=start_date, end_date=end_date).compute()
 
     # Find matching timestamps
     timestamp_pairs = find_closest_timestamps(da_s1.time.values, da_s2.time.values, max_diff_days=2)
@@ -70,15 +62,8 @@ def main():
         mode_dir.mkdir(exist_ok=True)
         
         # Process embeddings
-        spectral_params = {
-            's1_wavelengths': S1_WAVELENGTHS,
-            's1_bandwidths': S1_BANDWIDTHS,
-            's2_wavelengths': S2_WAVELENGTHS,
-            's2_bandwidths': S2_BANDWIDTHS
-        }
-        embeddings, ndvi, dates = process_embeddings(encoder, da_s1, da_s2, timestamp_pairs, mode, 
-                                                    device=device, lon=LON, lat=LAT, area=AREA, 
-                                                    kernel_size=KERNEL_SIZE, **spectral_params)
+        embeddings, ndvi, dates = process_embeddings_batched(encoder, da_s1, da_s2, timestamp_pairs, 
+                                                            mode=mode, device=device, lon=LON, lat=LAT)
         
         # Analyze fire detection
         results[mode] = analyze_fire_detection(embeddings, dates, ndvi, mode, mode_dir, FIRE_DATE)

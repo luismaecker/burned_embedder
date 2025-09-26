@@ -66,14 +66,14 @@ def main():
             print(f"  ✓ S1 data saved: {s1_file}")
             
             # Load Sentinel-2 data
-            print(f"  Loading Sentinel-2 data...")
-            da_s2 = load_s2(LAT, LON, start_date=start_date, end_date=end_date)
-            da_s2_clean = clean_for_netcdf(da_s2)
-            s2_file = fire_data_dir / "da_s2.nc"
-            da_s2_clean.to_netcdf(s2_file)
-            print(f"  ✓ S2 data saved: {s2_file}")
+            # print(f"  Loading Sentinel-2 data...")
+            # da_s2 = load_s2(LAT, LON, start_date=start_date, end_date=end_date)
+            # da_s2_clean = clean_for_netcdf(da_s2)
+            # s2_file = fire_data_dir / "da_s2.nc"
+            # da_s2_clean.to_netcdf(s2_file)
+            # print(f"  ✓ S2 data saved: {s2_file}")
             
-            print(f"  Data shapes - S1: {da_s1.shape}, S2: {da_s2.shape}")
+            #print(f"  Data shapes - S1: {da_s1.shape}, S2: {da_s2.shape}")
             
         except Exception as e:
             print(f"  ✗ Error processing fire {csv_row_idx}: {e}")

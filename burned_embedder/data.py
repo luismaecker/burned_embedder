@@ -58,7 +58,7 @@ def harmonize_s2_baseline(data):
     
     return harmonized
 
-def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31"):
+def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31", edge_size=100):
     """Load and clean Sentinel-1 data"""
 
     print("Loading Sentinel-1 data...")
@@ -67,7 +67,7 @@ def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31"):
         collection="sentinel-1-rtc",
         bands=["vv", "vh"],
         start_date=start_date, end_date=end_date,
-        edge_size=100, resolution=10,
+        edge_size=edge_size, resolution=10,
        # query={"sat:orbit_state": {"eq": "ascending"}}
 
     )
@@ -79,7 +79,8 @@ def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31"):
     
     return da_s1_clean
 
-def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B09","B11","B12"]):
+def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B09","B11","B12"],
+            edge_size=100, cloud_cover=10):
     """Load and clean Sentinel-2 data with automatic baseline correction"""
     print("Loading Sentinel-2 data...")
     da_s2 = cubo.create(
@@ -87,8 +88,8 @@ def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B0
         collection="sentinel-2-l2a",
         bands=bands,
         start_date=start_date, end_date=end_date,
-        edge_size=100, resolution=10,
-        query={"eo:cloud_cover": {"lt": 2}}
+        edge_size=edge_size, resolution=10,
+        query={"eo:cloud_cover": {"lt": cloud_cover}}
     )
 
     # Clean duplicates

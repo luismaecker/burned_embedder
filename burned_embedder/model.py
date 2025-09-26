@@ -1,75 +1,73 @@
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import torch
+from torchgeo.models import CopernicusFM_Base_Weights, copernicusfm_base
 from tqdm import tqdm
 
+from burned_embedder import config
 from burned_embedder.analysis import calculate_ndvi
 
 
-def load_model(device, model_size='base', weights_path=None):
-    """Load and prepare the TerraFM model"""
-    try:
-        from terrafm import terrafm_base, terrafm_large
-    except ImportError:
-        raise ImportError("TerraFM module not found. Please ensure terrafm.py is in your Python path.")
-    
-    print(f"Loading TerraFM-{model_size.upper()} model...")
-    
-    # Load the appropriate model
-    if model_size == 'base':
-        encoder = terrafm_base()
-    elif model_size == 'large':
-        encoder = terrafm_large()
-    else:
-        raise ValueError("model_size must be 'base' or 'large'")
-    
-    # Load pretrained weights if provided
-    if weights_path:
-        print(f"Loading weights from {weights_path}")
-        state_dict = torch.load(weights_path, map_location="cpu")
-        msg = encoder.load_state_dict(state_dict, strict=False)
-        print(f"Loaded weights: {msg}")
-    
+def load_model(device):
+    """Load and prepare the Copernicus FM model"""
+    print("Loading Copernicus FM model...")
+    encoder = copernicusfm_base(weights=CopernicusFM_Base_Weights.CopernicusFM_ViT)
     encoder.to(device)
     encoder.eval()
     return encoder
 
 
 def process_batch_unified(encoder, da_s1_batch, da_s2_batch, acquisition_dates_batch, mode, device, lon, lat):
-    """Unified batch processing function for TerraFM"""
+    """Unified batch processing function that handles all modes"""
     
-    # TerraFM expects separate inputs for different modalities
+    # Prepare data based on mode
     if mode == 's1_only':
-        # Only S1 data (2 channels: VV, VH)
+        # Only use S1 data
         s1_data_list = [np.array(da_s1_t) for da_s1_t in da_s1_batch]
-        s1_batch = np.stack(s1_data_list, axis=0)  # Shape: (batch_size, 2, H, W)
-        x = torch.from_numpy(s1_batch).float().to(device)
+        data_batch = np.stack(s1_data_list, axis=0)  # Shape: (batch_size, 2, H, W)
+        wavelengths = config.S1_WAVELENGTHS
+        bandwidths = config.S1_BANDWIDTHS
         
     elif mode == 's2_only':
-        # Only S2 data (12 channels based on your data shape)
+        # Only use S2 data
         s2_data_list = [da_s2_t.values for da_s2_t in da_s2_batch]
-        s2_batch = np.stack(s2_data_list, axis=0)  # Shape: (batch_size, 12, H, W)
-        x = torch.from_numpy(s2_batch).float().to(device)
+        data_batch = np.stack(s2_data_list, axis=0)  # Shape: (batch_size, 13, H, W)
+        wavelengths = config.S2_WAVELENGTHS
+        bandwidths = config.S2_BANDWIDTHS
         
     elif mode == 'combined':
-        # For combined mode, you need to check TerraFM's expected input format
-        # It might need both S1 and S2 as separate arguments
+        # Combine S1 and S2 data
         s1_data_list = [np.array(da_s1_t) for da_s1_t in da_s1_batch]
         s2_data_list = [da_s2_t.values for da_s2_t in da_s2_batch]
         
         s1_batch = np.stack(s1_data_list, axis=0)  # Shape: (batch_size, 2, H, W)
-        s2_batch = np.stack(s2_data_list, axis=0)  # Shape: (batch_size, 12, H, W)
+        s2_batch = np.stack(s2_data_list, axis=0)  # Shape: (batch_size, 13, H, W)
         
-        # Concatenate S1 and S2 (14 channels total: 2 S1 + 12 S2)
-        data_batch = np.concatenate([s1_batch, s2_batch], axis=1)
-        x = torch.from_numpy(data_batch).float().to(device)
-    
+        data_batch = np.concatenate([s1_batch, s2_batch], axis=1)  # Shape: (batch_size, 15, H, W)
+        wavelengths = config.S1_WAVELENGTHS + config.S2_WAVELENGTHS
+        bandwidths = config.S1_BANDWIDTHS + config.S2_BANDWIDTHS
+        
     else:
         raise ValueError("Mode must be 's1_only', 's2_only', or 'combined'")
     
-    # TerraFM forward pass
+    # Convert to tensor
+    x = torch.from_numpy(data_batch).float().to(device)
+    
+    # Calculate time deltas for all dates
+    reference_date = datetime(1970, 1, 1)
+    time_deltas = [(date - reference_date).days for date in acquisition_dates_batch]
+    
+    # Create batch metadata tensor #TODO: add time index back
+    metadata_list = [[lon, lat, torch.nan, config.AREA] for time_delta in time_deltas]
+    metadata = torch.tensor(metadata_list, dtype=torch.float32, device=device)
+    
+    # Forward pass
     with torch.no_grad():
-        embeddings = encoder(x)
+        embeddings = encoder(x, metadata, wavelengths=wavelengths, 
+                           bandwidths=bandwidths, language_embed=None, 
+                           input_mode='spectral', kernel_size=config.KERNEL_SIZE)
     
     return embeddings.cpu().numpy()
 

@@ -1,6 +1,9 @@
 import cubo
 import numpy as np
 import datetime
+import pandas as pd
+import datetime
+from datetime import timedelta
 
 def harmonize_s2_baseline(data):
     """
@@ -58,6 +61,7 @@ def harmonize_s2_baseline(data):
     
     return harmonized
 
+
 def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31", edge_size=100):
     """Load and clean Sentinel-1 data"""
 
@@ -80,16 +84,17 @@ def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31", edge_size=
     return da_s1_clean
 
 def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B09","B11","B12"],
-            edge_size=100, cloud_cover=10):
+            edge_size=100, max_cloud_cover=10):
     """Load and clean Sentinel-2 data with automatic baseline correction"""
     print("Loading Sentinel-2 data...")
+    
     da_s2 = cubo.create(
         lat=lat, lon=lon,
         collection="sentinel-2-l2a",
         bands=bands,
         start_date=start_date, end_date=end_date,
         edge_size=edge_size, resolution=10,
-        query={"eo:cloud_cover": {"lt": cloud_cover}}
+        query={"eo:cloud_cover": {"lt": max_cloud_cover}}
     )
 
     # Clean duplicates
@@ -101,6 +106,7 @@ def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B0
     print(f"S2 data shape: {da_s2_harmonized.shape}")
 
     return da_s2_harmonized
+
 
 
 def find_closest_timestamps(s1_times, s2_times, max_diff_days=2):
@@ -127,3 +133,148 @@ def find_closest_timestamps(s1_times, s2_times, max_diff_days=2):
             used_s1.add(s1_idx)
     
     return final_pairs
+
+
+
+
+
+
+def find_closest_observations(timestamps, deforest_start, deforest_end, n_before=1, n_after=1):
+    """
+    Find n closest observations before deforestation start and after deforestation end.
+    
+    Args:
+        timestamps: Array of observation timestamps
+        deforest_start: Start date of deforestation period
+        deforest_end: End date of deforestation period  
+        n_before: Number of observations to get before deforestation
+        n_after: Number of observations to get after deforestation
+        
+    Returns:
+        Tuple of (before_indices, after_indices)
+    """
+    import numpy as np
+    
+    # Convert to datetime if needed
+    if isinstance(deforest_start, str):
+        deforest_start = pd.to_datetime(deforest_start)
+    if isinstance(deforest_end, str):
+        deforest_end = pd.to_datetime(deforest_end)
+    
+    # Convert timestamps to pandas datetime if needed
+    if not isinstance(timestamps, pd.DatetimeIndex):
+        timestamps = pd.to_datetime(timestamps)
+    
+    # Find observations before and after deforestation period
+    before_mask = timestamps < deforest_start
+    after_mask = timestamps > deforest_end
+    
+    before_times = timestamps[before_mask]
+    after_times = timestamps[after_mask]
+    
+    # Get indices of closest observations
+    before_indices = np.array([], dtype=int)
+    after_indices = np.array([], dtype=int)
+    
+    if len(before_times) > 0:
+        # Calculate time differences and convert to numpy array
+        time_diffs = (deforest_start - before_times).total_seconds()
+        time_diffs_array = np.abs(time_diffs.values)  # Convert to numpy and take absolute value
+        sorted_before_idx = np.argsort(time_diffs_array)[:n_before]
+        before_indices = np.where(before_mask)[0][sorted_before_idx]
+    
+    if len(after_times) > 0:
+        # Calculate time differences and convert to numpy array
+        time_diffs = (after_times - deforest_end).total_seconds()
+        time_diffs_array = np.abs(time_diffs.values)  # Convert to numpy and take absolute value
+        sorted_after_idx = np.argsort(time_diffs_array)[:n_after]
+        after_indices = np.where(after_mask)[0][sorted_after_idx]
+    
+    return before_indices.astype(int), after_indices.astype(int)
+
+def load_s1_filtered(lat, lon, start_date, end_date, deforest_start, deforest_end, 
+                    n_before=1, n_after=1, edge_size=100):
+    """Load Sentinel-1 data and filter to specific observations around deforestation period"""
+    
+    # Load all data first
+    da_s1_full = load_s1(lat, lon, start_date, end_date, edge_size)
+    
+    # Find closest observations
+    timestamps = pd.to_datetime(da_s1_full.time.values)
+    before_idx, after_idx = find_closest_observations(
+        timestamps, deforest_start, deforest_end, n_before, n_after
+    )
+    
+    # Combine indices and select those observations
+    selected_indices = np.concatenate([before_idx, after_idx])
+    if len(selected_indices) > 0:
+        da_s1_filtered = da_s1_full.isel(time=selected_indices)
+        return da_s1_filtered.sortby('time')  # Sort chronologically
+    else:
+        print(f"    Warning: No suitable observations found")
+        return None
+    
+    
+
+
+def calculate_search_dates(earliest_alert, latest_alert, buffer_months=1):
+    """
+    Calculate search start and end dates based on deforestation alerts with buffer.
+    
+    Args:
+        earliest_alert: First deforestation alert date
+        latest_alert: Last deforestation alert date  
+        buffer_months: Number of months to add/subtract as buffer
+        
+    Returns:
+        Tuple of (search_start_date, search_end_date) as strings
+    """
+    # Convert to datetime if strings
+    if isinstance(earliest_alert, str):
+        earliest_alert = pd.to_datetime(earliest_alert)
+    if isinstance(latest_alert, str):
+        latest_alert = pd.to_datetime(latest_alert)
+    
+    # Calculate buffer in days (approximate)
+    buffer_days = buffer_months * 30
+    
+    # Add buffer before and after
+    search_start = earliest_alert - timedelta(days=buffer_days)
+    search_end = latest_alert + timedelta(days=buffer_days)
+    
+    # Convert back to string format
+    search_start_str = search_start.strftime("%Y-%m-%d")
+    search_end_str = search_end.strftime("%Y-%m-%d")
+    
+    return search_start_str, search_end_str
+
+
+def clean_metadata_nc(da, metadata_dict=None):
+    """Remove problematic coordinates and add metadata to NetCDF"""
+    # List of coordinates that typically cause serialization issues
+    problematic_coords = [
+        'sar:polarizations', 
+        'raster:bands',
+        'proj:centroid',
+        'description',
+        'title',
+        "proj:bbox",
+        "proj:shape",
+        "proj:transform"
+    ]
+    
+    # Drop problematic coordinates
+    coords_to_drop = [coord for coord in problematic_coords if coord in da.coords]
+    
+    if coords_to_drop:
+        print(f"    Dropping problematic coordinates: {coords_to_drop}")
+        da_clean = da.drop_vars(coords_to_drop)
+    else:
+        da_clean = da
+    
+    # Add metadata as attributes if provided
+    if metadata_dict is not None:
+        for key, value in metadata_dict.items():
+            da_clean.attrs[key] = value
+    
+    return da_clean

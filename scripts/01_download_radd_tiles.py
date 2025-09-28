@@ -83,8 +83,8 @@ if __name__ == "__main__":
     # Configure which tiles go to which folders
     tile_configs = {
         "south_america": [
-            "10S_040W", "10S_050W", "10S_060W", "10S_070W", "10S_080W",
-            "20S_050W", "20S_060W", "20S_070W",
+            "10S_060W", "10S_070W",
+            "20S_060W", "20S_070W",
             "00N_050W", "00N_060W", "00N_070W", "00N_080W",
             "10N_060W", "10N_070W", "10N_080W"
         ],

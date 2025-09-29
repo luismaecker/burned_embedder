@@ -40,45 +40,72 @@ The project utilizes various data sources, including satellite imagery and groun
 ## Workflow
 
 ```
-┌─────────────────────────────────┐
-│      Data Acquisition           │
-│  • Sentinel-1 (Radar)           │
-│  • Sentinel-2 (Optical)         │
-│  • RADD Alerts                  │
-│  • Dynamic World LULC           │
-└────────────────┬────────────────┘
+┌─────────────────────────────────────────┐
+│ 01. Data Acquisition                    │
+│ • Download RADD alert tiles             │
+│ • GeoJSON tile boundaries               │
+│ • Per continent organization            │
+└────────────────┬────────────────────────┘
                  │
                  ▼
-┌─────────────────────────────────┐
-│     Data Preprocessing          │
-│  • Image alignment              │
-│  • Temporal compositing         │
-│  • Label preparation            │
-└────────────────┬────────────────┘
+┌─────────────────────────────────────────┐
+│ 02. RADD Alert Processing               │
+│ • Decode alert data                     │
+│ • Connected components analysis         │
+│ • Filter by size & confidence           │
+│ • Extract deforestation events          │
+└────────────────┬────────────────────────┘
                  │
                  ▼
-┌─────────────────────────────────┐
-│     Feature Extraction          │
-│  • Copernicus-FM embeddings     │
-│  • Spatial features             │
-│  • Temporal features            │
-└────────────────┬────────────────┘
+┌─────────────────────────────────────────┐
+│ 03. Event Consolidation                 │
+│ • Combine continent samples             │
+│ • Clean & deduplicate                   │
+│ • Create parquet datasets               │
+└────────────────┬────────────────────────┘
                  │
                  ▼
-┌─────────────────────────────────┐
-│      Model Training             │
-│  • Fine-tune embeddings         │
-│  • Train classifier             │
-│  • Validate results             │
-└────────────────┬────────────────┘
+┌─────────────────────────────────────────┐
+│ 04. Negative Sample Generation          │
+│ • Find stable forest areas              │
+│ • Match spatial distribution            │
+│ • Verify no alert activity              │
+└────────────────┬────────────────────────┘
                  │
                  ▼
-┌─────────────────────────────────┐
-│   Inference & Evaluation        │
-│  • Generate predictions         │
-│  • Calculate metrics            │
-│  • Create visualizations        │
-└─────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ 05. Sentinel Data Download              │
+│ • Load Sentinel-1 (Radar)               │
+│ • Filter by alert dates                 │
+│ • Observations before/after             │
+│ • Temporal alignment                    │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│ 06. Embedding Generation                │
+│ • Load Copernicus-FM model              │
+│ • Process S1 batch unified              │
+│ • Extract embeddings                    │
+│ • Save with metadata                    │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│ 07. Classifier Training                 │
+│ • Create stratified datasets            │
+│ • Train MLP classifier                  │
+│ • Early stopping & validation           │
+│ • Save final model                      │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│ Inference & Evaluation                  │
+│ • Generate predictions                  │
+│ • Calculate metrics                     │
+│ • Create visualizations                 │
+└─────────────────────────────────────────┘
 ```
 
 ## Prerequisites

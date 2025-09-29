@@ -4,7 +4,7 @@
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
-Aligning EO FM Embeddings for Burned Area detection
+Aligning EO FM Embeddings for Deforestated Area detection
 
 ## Project Description
 
@@ -25,17 +25,15 @@ The project utilizes various data sources, including satellite imagery and groun
 
 ## Key Features
 
-- Foundation Model Alignment: Fine-tunes Copernicus-FM embeddings specifically for deforestation area detection
 - Multi-Source Data Integration: Combines Sentinel-1 radar, Sentinel-2 optical imagery, and reference datasets
 - Cloud-Resilient Detection: Utilizes radar data that works in all weather conditions
-- Scalable Pipeline: Built with modern data science best practices using Cookiecutter template
+- Scalable Pipeline: Built with modern data science best practices
 
 ## Use Cases
 
 - Deforestation monitoring
 - Post-wildfire damage assessment
 - Real-time fire monitoring and alert systems
-- Historical burn scar mapping
 - Environmental impact studies
 - Forest management and conservation
 
@@ -54,7 +52,6 @@ The project utilizes various data sources, including satellite imagery and groun
 ┌─────────────────────────────────┐
 │     Data Preprocessing          │
 │  • Image alignment              │
-│  • Cloud masking                │
 │  • Temporal compositing         │
 │  • Label preparation            │
 └────────────────┬────────────────┘
@@ -101,7 +98,7 @@ The project utilizes various data sources, including satellite imagery and groun
 `source venv/bin/activate`  # On Windows: `venv\Scripts\activate`
 
 ### Install dependencies
-`pip install -r requirements.txt`
+`pip install -r requirements.txt` or use `uv sync`
 
 ### Install the package in development mode
 `pip install -e .`
@@ -123,8 +120,8 @@ The project utilizes various data sources, including satellite imagery and groun
 ├── models             <- Trained and serialized models, model predictions, or model summaries
 │
 ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         the creator's initials, and a short `-` delimited description, e.g.
-│                         `1.0-jqp-initial-data-exploration`.
+│                         followed by the name of what the notebook does, e.g.
+│                         `01_preprocessing`.
 │
 ├── pyproject.toml     <- Project configuration file with package metadata for 
 │                         burned_embedder and configuration for tools like black
@@ -166,3 +163,15 @@ The project utilizes various data sources, including satellite imagery and groun
 - Global Forest Watch for RADD alerts
 - ESA, IBM and NASA for the Copernicus Foundation Model
 - Cookiecutter Data Science for the project template
+
+## References
+
+We used a couple of frameworks, papers and methodologies as references for this project which are listed in our bibliography file.
+
+- Wang, Y., Xiong, Z., Liu, C., Stewart, A. J., Dujardin, T., Bountos, N. I., ... & Zhu, X. X. (2025). Towards a Unified Copernicus Foundation Model for Earth Vision. arXiv preprint arXiv:2503.11849. https://arxiv.org/abs/2503.11849
+- Drusch, M., Del Bello, U., Carlier, S., Colin, O., Fernandez, V., Gascon, F., ... & Bargellini, P. (2012). Sentinel-2: ESA's optical high-resolution mission for GMES operational services. Remote Sensing of Environment, 120, 25-36. https://doi.org/10.1016/j.rse.2011.05.028
+- Torres, R., Snoeij, P., Geudtner, D., Bibby, D., Davidson, M., Attema, E., ... & Brown, M. (2012). GMES Sentinel-1 mission. Remote Sensing of Environment, 120, 9-24. https://doi.org/10.1016/j.rse.2011.05.028
+- Reiche, J., Mullissa, A., Slagter, B., Gou, Y., Tsendbazar, N. E., Odongo-Braun, C., ... & Pickens, A. (2021). Forest disturbance alerts for the Congo Basin using Sentinel-1. Environmental Research Letters, 16(2), 024005. https://doi.org/10.1088/1748-9326/abd0a8
+- Brown, C. F., Brumby, S. P., Guzder-Williams, B., Birch, T., Hyde, S. B., Mazzariello, J., ... & Ilyushchenko, S. (2022). Dynamic World, Near real-time global 10 m land use land cover mapping. Scientific Data, 9(1), 251. https://doi.org/10.1038/s41597-022-01307-4
+- Gorelick, N., Hancher, M., Dixon, M., Ilyushchenko, S., Thau, D., & Moore, R. (2017). Google Earth Engine: Planetary-scale geospatial analysis for everyone. Remote Sensing of Environment, 202, 18-27. https://doi.org/10.1016/j.rse.2017.06.031
+

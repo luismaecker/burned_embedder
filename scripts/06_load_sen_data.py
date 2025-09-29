@@ -15,13 +15,17 @@ def main(observations_before=1, observations_after=1, buffer_months=1):
 
     # Load deforestation data
     deforest_df = pd.read_parquet("data/interim/radd/south_america_combined.parquet")
-    deforest_df = deforest_df[deforest_df['duration_days'] <= 30]
 
     # Reset index
-    deforest_df = deforest_df.reset_index(drop=True)
+    deforest_df = deforest_df.reset_index(drop=True)    
 
     # Write cleaned df 
     deforest_df.to_parquet("data/processed/radd/south_america_combined_clean.parquet", index=False)
+ 
+
+    # Load samples without deforestation
+    negative_df = pd.read_parquet("data/processed/radd/negative_samples_sequential.parquet")
+
 
     print(f"Loaded {len(deforest_df)} deforestation records")
     

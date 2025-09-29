@@ -283,7 +283,7 @@ def generate_negative_samples(deforest_df, output_file=None,
 
 if __name__ == '__main__':
     # Load deforestation events
-    deforest_df = pd.read_parquet(root_path / "data/processed/radd/south_america_combined_clean.parquet")
+    deforest_df = pd.read_parquet(root_path / "data/processed/radd/south_america_combined_clean_sampled.parquet")
     print(f"Loaded {len(deforest_df)} deforestation events")
     
     # Generate negative samples sequentially

@@ -6,10 +6,108 @@
 
 Algining EO FM Embeddings for Burned Area detection
 
+## Project Description
+
+*burned_embedder* is a machine learning project that leverages Earth Observation (EO) foundation models to detect and map deforested areas from satellite imagery. The project uses the Copernicus Foundation Model to generate embeddings from Sentinel-1 radar data, which are then fine-tuned for the specific task of deforestation area detection.
+Traditional deforestation detection methods often rely on optical imagery, which can be hindered by cloud cover and smoke. This project takes advantage of radar imagery (Sentinel-1) that can penetrate clouds, combined with state-of-the-art foundation model embeddings, to provide more reliable and accurate deforestation area mapping.
+
+## Data Description
+
+The project utilizes various data sources, including satellite imagery and ground truth data, to train models for burned area detection. In the following table, we summarize the key datasets used in this project:
+
+| Dataset Name       | Description                                      | Source               |
+|--------------------|--------------------------------------------------|----------------------|
+| Radar Satellite Imagery  | Sentinel-1 SAR embeddings (Copernicus-FM)  | [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/dataset/sentinel-1-rtc)          |
+| Optical Satellite Imagery  | Sentinel-2 High-resolution satellite images of the region (for visualization only)  | [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/dataset/sentinel-2-l2a)          |
+| RADD               | Sentinel-1 derived "RAdar for Deforestation Alerts" | [Global Forest Watch](https://data.globalforestwatch.org/datasets/3c27123823a5461599fac9cb06862007_0/explore)        |
+| Dynamic World V1   | near real-time LULC Dataset, 10m resolution from World Resources Institute and Google  | [Google Earth Engine](https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_DYNAMICWORLD_V1#description)                |
+
+
+## Key Features
+
+Foundation Model Alignment: Fine-tunes Copernicus-FM embeddings specifically for deforestation area detection
+Multi-Source Data Integration: Combines Sentinel-1 radar, Sentinel-2 optical imagery, and reference datasets
+Cloud-Resilient Detection: Utilizes radar data that works in all weather conditions
+Scalable Pipeline: Built with modern data science best practices using Cookiecutter template
+
+## Use Cases
+
+- Deforestation monitoring
+- Post-wildfire damage assessment
+- Real-time fire monitoring and alert systems
+- Historical burn scar mapping
+- Environmental impact studies
+- Forest management and conservation
+
+## Workflow
+
+┌─────────────────────────────────────────────────────────────────┐
+│                         Data Acquisition                         │
+│  • Sentinel-1 radar imagery (Microsoft Planetary Computer)      │
+│  • Sentinel-2 optical imagery (visualization)                   │
+│  • RADD deforestation alerts (reference data)                   │
+│  • Dynamic World LULC (land cover context)                      │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Data Preprocessing                          │
+│  • Image alignment and coregistration                           │
+│  • Cloud masking and quality filtering                          │
+│  • Temporal compositing                                         │
+│  • Label preparation and validation                             │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Feature Extraction                            │
+│  • Generate embeddings using Copernicus-FM                      │
+│  • Extract spatial and temporal features                        │
+│  • Create multi-scale representations                           │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Model Training                              │
+│  • Fine-tune embeddings for deforestation area detection               │
+│  • Train classification/segmentation head                       │
+│  • Validate on holdout regions                                  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 Inference & Evaluation                           │
+│  • Generate deforestation area predictions                             │
+│  • Calculate performance metrics                                │
+│  • Visualize results and create reports                         │
+└─────────────────────────────────────────────────────────────────┘
+
+## Prerequisites
+
+- Python 3.8+
+- CUDA-compatible GPU (recommended for training)
+- Access to Microsoft Planetary Computer and Google Earth Engine
+
+## Setup
+
+### Clone the repository
+git clone https://github.com/yourusername/burned_embedder.git
+cd burned_embedder
+
+### Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+### Install dependencies
+pip install -r requirements.txt
+
+### Install the package in development mode
+pip install -e .
+
 ## Project Organization
 
 ```
-├── LICENSE            <- Open-source license if one is chosen
+├── LICENSE            <- Open-source license
 ├── Makefile           <- Makefile with convenience commands like `make data` or `make train`
 ├── README.md          <- The top-level README for developers using this project.
 ├── data

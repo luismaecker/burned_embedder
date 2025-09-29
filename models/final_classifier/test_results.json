@@ -1,0 +1,39 @@
+{
+  "experiment_name": "final_production_model",
+  "config": {
+    "test_size": 0.2,
+    "val_split": 0.1,
+    "seed": 2,
+    "input_type": "concat",
+    "hidden_dims": [
+      1400,
+      700,
+      350
+    ],
+    "dropout": 0.4,
+    "weight_decay": 0.0001,
+    "batch_size": 32,
+    "lr": 0.001,
+    "epochs": 100,
+    "patience": 15
+  },
+  "best_epoch": 45,
+  "best_val_f1": 0.8638132295719845,
+  "test_loss": 0.3552527904118362,
+  "test_f1": 0.8704,
+  "test_precision": 0.8662420382165605,
+  "test_recall": 0.8745980707395499,
+  "test_roc_auc": 0.9381972972045176,
+  "confusion_matrix": [
+    [
+      239,
+      42
+    ],
+    [
+      39,
+      272
+    ]
+  ],
+  "best_train_f1": 0.956366874443455,
+  "overfit_gap": 0.08596687444345508
+}

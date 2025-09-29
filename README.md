@@ -8,7 +8,7 @@ Aligning EO FM Embeddings for Deforestated Area detection
 
 ## Project Description
 
-*burned_embedder* is a machine learning project that leverages Earth Observation (EO) foundation models to detect and map deforested areas from satellite imagery. The project uses the Copernicus Foundation Model to generate embeddings from Sentinel-1 radar data, which are then fine-tuned for the specific task of deforestation area detection.
+*burned_embedder* is a machine learning project that leverages Earth Observation (EO) foundation models to detect and map deforested areas from satellite imagery. The project uses the Copernicus Foundation Model to generate embeddings from Sentinel-1 radar data, which are then used for the specific task of deforestation area detection.
 Traditional deforestation detection methods often rely on optical imagery, which can be hindered by cloud cover and smoke. This project takes advantage of radar imagery (Sentinel-1) that can penetrate clouds, combined with state-of-the-art foundation model embeddings, to provide more reliable and accurate deforestation area mapping.
 
 ## Data Description

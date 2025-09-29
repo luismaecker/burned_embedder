@@ -48,7 +48,7 @@ class DeforestationDataset(Dataset):
 
         # Apply augmentation if enabled
         if self.augment:
-            noise = torch.randn_like(input_embedding) * 0.01
+            noise = torch.randn_like(input_embedding) * 0.002
             input_embedding = input_embedding + noise
         
         return input_embedding, label

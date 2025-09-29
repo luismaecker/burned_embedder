@@ -210,7 +210,7 @@ def main():
             continue
     
     # Save summary
-    summary_dir = root_path / "experiments"
+    summary_dir = root_path / "experiments_more"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     with open(summary_dir / f"summary_{timestamp}.json", 'w') as f:

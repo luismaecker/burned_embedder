@@ -424,7 +424,7 @@ def process_multiple_rasters(input_folder, min_area_pixels, confidence_level,
     return all_results
 
 
-# Main execution remains the same
+# Main execution - modified to create 3 continent-level CSVs
 if __name__ == "__main__":
     
     # Configuration
@@ -437,41 +437,79 @@ if __name__ == "__main__":
     N_PROCESSES = 40
     
     # Choose mode
-    PROCESS_SINGLE_FILE = False
-    INPUT_RASTER = "data/raw/10N_080W.tif"
-    INPUT_FOLDER = "data/raw/radd/south_america"
+    INPUT_RASTER_AF = "data/raw/radd/africa/00N_020E_radd_alerts.tif"
+    INPUT_FOLDER_SA = "data/raw/radd/south_america"
+    INPUT_RASTER_SEA = "data/raw/radd/southeast_asia/10N_100E_radd_alerts.tif"
 
     print(f"Output folder: {OUTPUT_FOLDER}")
     print(f"Samples per tile: {N_SAMPLES}")
     print(f"Files per tile: {N_SAMPLES*2} rasters + 3 combined files")
     
-    if PROCESS_SINGLE_FILE:
-        
-        result = process_radd_raster_samples(
-            input_path=INPUT_RASTER,
-            min_area_pixels=MIN_AREA_PIXELS,
-            confidence_level=CONFIDENCE_LEVEL,
-            n_samples=N_SAMPLES,
-            window_size=WINDOW_SIZE,
-            output_folder=OUTPUT_FOLDER,
-            seed=SEED,
-            n_processes=N_PROCESSES
-        )
-        
-        if result:
-            print(f"Complete: {result['successful_samples']} samples processed")
+    # Store all features by continent
+    continent_results = {}
     
-    else:
-        results = process_multiple_rasters(
-            input_folder=INPUT_FOLDER,
-            min_area_pixels=MIN_AREA_PIXELS,
-            confidence_level=CONFIDENCE_LEVEL,
-            n_samples=N_SAMPLES,
-            window_size=WINDOW_SIZE,
-            output_folder=OUTPUT_FOLDER,
-            seed=SEED,
-            n_processes=N_PROCESSES
-        )
+    # Process Africa
+    result_af = process_radd_raster_samples(
+        input_path=INPUT_RASTER_AF,
+        min_area_pixels=MIN_AREA_PIXELS,
+        confidence_level=CONFIDENCE_LEVEL,
+        n_samples=N_SAMPLES,
+        window_size=WINDOW_SIZE,
+        output_folder=OUTPUT_FOLDER,
+        seed=SEED,
+        n_processes=N_PROCESSES
+    )
         
-        if results:
-            print(f"Complete: {len(results)} tiles processed")
+    if result_af:
+        print(f"Complete: {result_af['successful_samples']} samples processed for {INPUT_RASTER_AF}")
+        continent_results['africa'] = result_af.get('component_features', [])
+
+    # Process Southeast Asia
+    result_sea = process_radd_raster_samples(
+        input_path=INPUT_RASTER_SEA,
+        min_area_pixels=MIN_AREA_PIXELS,
+        confidence_level=CONFIDENCE_LEVEL,
+        n_samples=N_SAMPLES,
+        window_size=WINDOW_SIZE,
+        output_folder=OUTPUT_FOLDER,
+        seed=SEED,
+        n_processes=N_PROCESSES
+    )
+        
+    if result_sea:
+        print(f"Complete: {result_sea['successful_samples']} samples processed for {INPUT_RASTER_SEA}")
+        continent_results['southeast_asia'] = result_sea.get('component_features', [])
+    
+    # # Process South America
+    # results_sa = process_multiple_rasters(
+    #     input_folder=INPUT_FOLDER_SA,
+    #     min_area_pixels=MIN_AREA_PIXELS,
+    #     confidence_level=CONFIDENCE_LEVEL,
+    #     n_samples=N_SAMPLES,
+    #     window_size=WINDOW_SIZE,
+    #     output_folder=OUTPUT_FOLDER,
+    #     seed=SEED,
+    #     n_processes=N_PROCESSES
+    # )
+    
+    # if results_sa:
+    #     print(f"Complete: {len(results_sa)} tiles processed for {INPUT_FOLDER_SA}")
+    #     all_sa_features = []
+    #     for result in results_sa:
+    #         all_sa_features.extend(result.get('component_features', []))
+    #     continent_results['south_america'] = all_sa_features
+    
+    # Create continent-level CSVs
+    print("\nCreating continent-level CSV files...")
+    for continent, features in continent_results.items():
+        if features:
+            continent_gdf = gpd.GeoDataFrame([
+                {'geometry': f['geometry'], **f['properties']} 
+                for f in features
+            ])
+            
+            continent_csv = os.path.join(OUTPUT_FOLDER, f"{continent}_combined.csv")
+            continent_gdf.drop('geometry', axis=1).to_csv(continent_csv, index=False)
+            print(f"Created {continent_csv} with {len(features)} components")
+    
+    print("\nAll processing complete!")

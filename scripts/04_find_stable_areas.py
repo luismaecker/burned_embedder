@@ -183,13 +183,13 @@ def sample_negative_location_for_event(event_idx, event, radd_data, transform,
         
         try:
             is_forested, forest_fraction = check_forest_cover_gee(
-                sample_lat, sample_lon, event['earliest_alert'], forest_threshold=0.2
+                sample_lat, sample_lon, event['earliest_alert'], forest_threshold=0.3
             )
             
             if is_forested:
                 return {
-                    'lat': sample_lat,
-                    'lon': sample_lon,
+                    'centroid_y': sample_lat,
+                    'centroid_x': sample_lon,
                     'forest_fraction': forest_fraction,
                     'earliest_alert': event['earliest_alert'],
                     'latest_alert': event['latest_alert'],
@@ -197,8 +197,8 @@ def sample_negative_location_for_event(event_idx, event, radd_data, transform,
                     'is_deforestation': False,
                     'attempt_number': attempt + 1,
                     'positive_event_id': event_idx,
-                    'positive_lat': event['centroid_y'],
-                    'positive_lon': event['centroid_x'],
+                    'positive_centroid_y': event['centroid_y'],
+                    'positive_centroid_x': event['centroid_x'],
                     'positive_area_hectares': event.get('area_hectares', np.nan),
                     'positive_duration_days': event.get('duration_days', np.nan)
                 }
@@ -249,7 +249,7 @@ def generate_negative_samples(deforest_df, output_file=None,
                 )
                 
                 if negative_sample:
-                    negative_sample['tile_id'] = tile_id
+                    negative_sample['tile_name'] = tile_id
                     negative_samples.append(negative_sample)
         
         except FileNotFoundError:
@@ -263,7 +263,7 @@ def generate_negative_samples(deforest_df, output_file=None,
     
     if len(negative_samples_df) > 0:
         # Convert to GeoDataFrame with EPSG:4326
-        geometry = [Point(row['lon'], row['lat']) for _, row in negative_samples_df.iterrows()]
+        geometry = [Point(row['centroid_x'], row['centroid_y']) for _, row in negative_samples_df.iterrows()]
         negative_samples_gdf = gpd.GeoDataFrame(negative_samples_df, geometry=geometry, crs='EPSG:4326')
         
         print(f"\nGenerated {len(negative_samples_df)} negative samples")
@@ -283,13 +283,15 @@ def generate_negative_samples(deforest_df, output_file=None,
 
 if __name__ == '__main__':
     # Load deforestation events
-    deforest_df = pd.read_parquet(root_path / "data/processed/radd/south_america_combined_clean_sampled.parquet")
+    deforest_df = pd.read_parquet(root_path / "data/processed/radd/south_america_combined_clean_sampled_15.parquet")
     print(f"Loaded {len(deforest_df)} deforestation events")
     
     # Generate negative samples sequentially
     negative_samples_df = generate_negative_samples(
         deforest_df,
-        output_file=root_path / "data/processed/radd/negative_samples_sequential.parquet"
+        output_file=root_path / "data/processed/radd/negative_samples_15_clean.parquet"
     )
+
+
     
     print("Sequential negative sampling complete!")

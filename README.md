@@ -41,46 +41,46 @@ Scalable Pipeline: Built with modern data science best practices using Cookiecut
 
 ## Workflow
 
-┌─────────────────────────────────────────────────────────────────┐
-│                         Data Acquisition                         │
-│  • Sentinel-1 radar imagery (Microsoft Planetary Computer)      │
-│  • Sentinel-2 optical imagery (visualization)                   │
-│  • RADD deforestation alerts (reference data)                   │
-│  • Dynamic World LULC (land cover context)                      │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Data Preprocessing                          │
-│  • Image alignment and coregistration                           │
-│  • Cloud masking and quality filtering                          │
-│  • Temporal compositing                                         │
-│  • Label preparation and validation                             │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Feature Extraction                            │
-│  • Generate embeddings using Copernicus-FM                      │
-│  • Extract spatial and temporal features                        │
-│  • Create multi-scale representations                           │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Model Training                              │
-│  • Fine-tune embeddings for deforestation area detection               │
-│  • Train classification/segmentation head                       │
-│  • Validate on holdout regions                                  │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                 Inference & Evaluation                           │
-│  • Generate deforestation area predictions                             │
-│  • Calculate performance metrics                                │
-│  • Visualize results and create reports                         │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐
+                    │    Data Acquisition         │
+                    │  - Sentinel-1 (Radar)       │
+                    │  - Sentinel-2 (Optical)     │
+                    │  - RADD Alerts              │
+                    │  - Dynamic World LULC       │
+                    └──────────────┬──────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────┐
+                    │   Data Preprocessing        │
+                    │  - Image alignment          │
+                    │  - Cloud masking            │
+                    │  - Temporal compositing     │
+                    │  - Label preparation        │
+                    └──────────────┬──────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────┐
+                    │   Feature Extraction        │
+                    │  - Copernicus-FM embeddings │
+                    │  - Spatial features         │
+                    │  - Temporal features        │
+                    └──────────────┬──────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────┐
+                    │    Model Training           │
+                    │  - Fine-tune embeddings     │
+                    │  - Train classifier         │
+                    │  - Validate results         │
+                    └──────────────┬──────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────┐
+                    │  Inference & Evaluation     │
+                    │  - Generate predictions     │
+                    │  - Calculate metrics        │
+                    │  - Create visualizations    │
+                    └─────────────────────────────┘
 
 ## Prerequisites
 
@@ -91,18 +91,18 @@ Scalable Pipeline: Built with modern data science best practices using Cookiecut
 ## Setup
 
 ### Clone the repository
-git clone https://github.com/yourusername/burned_embedder.git
-cd burned_embedder
+`git clone https://github.com/luismaecker/burned_embedder`
+`cd burned_embedder`
 
 ### Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+`python -m venv venv`
+`source venv/bin/activate`  # On Windows: `venv\Scripts\activate`
 
 ### Install dependencies
-pip install -r requirements.txt
+`pip install -r requirements.txt`
 
 ### Install the package in development mode
-pip install -e .
+`pip install -e .`
 
 ## Project Organization
 
@@ -157,3 +157,10 @@ pip install -e .
 
 --------
 
+## Acknowledgments
+
+- Microsoft Planetary Computer for providing accessible satellite imagery
+- Google Earth Engine for Dynamic World dataset
+- Global Forest Watch for RADD alerts
+- ESA, IBM and NASA for the Copernicus Foundation Model
+- Cookiecutter Data Science for the project template

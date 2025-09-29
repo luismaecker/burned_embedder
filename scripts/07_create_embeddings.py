@@ -9,8 +9,7 @@ from burned_embedder.model import load_model, process_batch_unified
 root_path = rootutils.find_root()
 
 def process_single_event_embeddings(encoder, da_s1, event_id, device, output_dir):
-    """Process embeddings for a single deforestation event with 1 or 2 timestamps using batch processing"""
-    print(f"  Processing event {event_id}")
+    """Process embeddings for a single event with 2 timestamps using batch processing"""
     
     # Extract metadata from the dataset
     centroid_lat = float(da_s1.attrs.get('centroid_lat', 0))
@@ -18,25 +17,18 @@ def process_single_event_embeddings(encoder, da_s1, event_id, device, output_dir
     
     # Handle different numbers of timesteps
     num_timesteps = len(da_s1.time)
-    if num_timesteps == 0:
-        print(f"  ⚠️  Event {event_id} has no timesteps. Skipping.")
+    if num_timesteps != 2:
+        print(f"\n✗ Event {event_id}: Expected 2 timesteps, got {num_timesteps}. Skipping.")
         return False
-    elif num_timesteps == 1:
-        print(f"  ⚠️  Event {event_id} has only 1 timestep, expected 2. Skipping.")
-        return False
-    elif num_timesteps > 2:
-        print(f"  ⚠️  Event {event_id} has more than 2 timesteps, expected 2. Skipping.")
-        return False
-
     
     timestamps = da_s1.time.values
     
     try:
         import pandas as pd
         
-        # Normal case with 2 timesteps
-        da_s1_batch = [da_s1.isel(time=0), da_s1.isel(time=1)]  # Both timesteps
-        da_s2_batch = [None, None]  # Not used for S1-only mode
+        # Prepare batch with both timesteps
+        da_s1_batch = [da_s1.isel(time=0), da_s1.isel(time=1)]
+        da_s2_batch = [None, None]
         
         # Convert timestamps to datetime
         acquisition_dates_batch = [
@@ -44,7 +36,7 @@ def process_single_event_embeddings(encoder, da_s1, event_id, device, output_dir
             pd.to_datetime(timestamps[1]).to_pydatetime()
         ]
         
-        # Process both embeddings in a single batch call - much more efficient!
+        # Process both embeddings in a single batch call
         embeddings = process_batch_unified(
             encoder, da_s1_batch, da_s2_batch, acquisition_dates_batch,
             mode='s1_only', device=device, 
@@ -52,13 +44,11 @@ def process_single_event_embeddings(encoder, da_s1, event_id, device, output_dir
         )
         
         # Save embeddings separately
-        embedd_before = embeddings[0]  # First embedding (before)
-        embedd_after = embeddings[1]   # Second embedding (after)
+        embedd_before = embeddings[0]
+        embedd_after = embeddings[1]
         
         np.save(output_dir / "embedd_before.npy", embedd_before)
         np.save(output_dir / "embedd_after.npy", embedd_after)
-        
-        print(f"    ✓ Saved both embeddings in batch: {embeddings.shape}")
         
         # Save metadata
         metadata = {
@@ -71,63 +61,65 @@ def process_single_event_embeddings(encoder, da_s1, event_id, device, output_dir
             'earliest_alert': da_s1.attrs.get('earliest_alert', ''),
             'latest_alert': da_s1.attrs.get('latest_alert', ''),
             'duration_days': da_s1.attrs.get('duration_days', ''),
-            'size_pixels': da_s1.attrs.get('size_pixels', ''),
+            'sample_type': da_s1.attrs.get('sample_type', ''),
             'model_mode': 's1_only'
         }
         
+        # Only add size_pixels if it exists (positive samples)
+        if 'size_pixels' in da_s1.attrs:
+            metadata['size_pixels'] = da_s1.attrs.get('size_pixels', '')
+        
         np.save(output_dir / "metadata.npy", metadata)
-        print("    ✓ Saved metadata")
         
         return True
         
     except Exception as e:
-        print(f"    ✗ Error processing event {event_id}: {e}")
+        print(f"\n✗ Error processing event {event_id}: {e}")
         return False
 
-def main():
-    """Create embeddings for all deforestation events using CopernicusFM"""
-    print("Starting Deforestation Event Embedding Generation with CopernicusFM")
-    print("=" * 70)
+def process_sample_type(sample_type, encoder, device):
+    """Process all events for a given sample type (positive or negative)"""
+    print(f"\n{'='*70}")
+    print(f"Processing {sample_type.upper()} samples")
+    print(f"{'='*70}")
     
-    # Setup device
-    device = utils.setup_device(gpu_index=1, memory_fraction=1.0)
-    print(f"Using device: {device}")
+    # Find all event directories for this sample type
+    sen_data_dir = root_path / "data" / "processed" / "sen_data" / sample_type
     
-    # Load CopernicusFM model
-    encoder = load_model(device)
+    if not sen_data_dir.exists():
+        print(f"✗ Directory not found: {sen_data_dir}")
+        return 0, 0
     
-    # Find all deforestation events
-    sen_data_dir = root_path / "data" / "processed" / "sen_data"
     event_dirs = sorted([d for d in sen_data_dir.iterdir() if d.is_dir() and d.name.startswith('event_')])
     
-    print(f"Found {len(event_dirs)} deforestation events")
+    print(f"Found {len(event_dirs)} {sample_type} events")
     
     # Create output directory
-    embeddings_base_dir = root_path / "data" / "processed" / "embeddings"
-    embeddings_base_dir.mkdir(parents=True, exist_ok=True)
+    embeddings_dir = root_path / "data" / "processed" / "embeddings" / sample_type
+    embeddings_dir.mkdir(parents=True, exist_ok=True)
     
     successful_events = 0
     failed_events = 0
     
     # Process each event
-    for event_dir in tqdm(event_dirs, desc="Processing events"):
+    for event_dir in tqdm(event_dirs, desc=f"Processing {sample_type} samples"):
         event_name = event_dir.name
         event_id = int(event_name.split('_')[1])
         
         # Check if S1 data exists
         s1_file = event_dir / "da_s1.nc"
         if not s1_file.exists():
-            print(f"⚠️  S1 file not found for {event_name}: {s1_file}")
+            print(f"\n✗ S1 file not found for {event_name}")
             failed_events += 1
             continue
         
         # Create output directory for this event
-        output_dir = embeddings_base_dir / event_name
+        output_dir = embeddings_dir / event_name
         output_dir.mkdir(parents=True, exist_ok=True)
         
         # Check if embeddings already exist
         if (output_dir / "embedd_before.npy").exists() and (output_dir / "embedd_after.npy").exists():
-            print(f"  ⏭️  Embeddings already exist for {event_name}, skipping")
+            successful_events += 1
             continue
         
         try:
@@ -139,34 +131,57 @@ def main():
                 successful_events += 1
             else:
                 failed_events += 1
-                # Remove the embedding directory if processing failed
+                # Remove incomplete embedding directory
                 if output_dir.exists():
                     import shutil
                     shutil.rmtree(output_dir)
-                    print(f"    🗑️  Removed incomplete embedding directory: {output_dir.name}")
                 
         except Exception as e:
-            print(f"  ✗ Error loading data for {event_name}: {e}")
+            print(f"\n✗ Error loading data for {event_name}: {e}")
             failed_events += 1
-            # Remove the embedding directory if there was an error
+            # Remove incomplete embedding directory
             if output_dir.exists():
                 import shutil
                 shutil.rmtree(output_dir)
-                print(f"    🗑️  Removed incomplete embedding directory: {output_dir.name}")
             continue
     
-    # Summary
+    return successful_events, failed_events
+
+def main():
+    """Create embeddings for all positive and negative samples using CopernicusFM"""
+    print("Starting Embedding Generation with CopernicusFM")
+    print("="*70)
+    
+    # Setup device
+    device = utils.setup_device(gpu_index=1, memory_fraction=1.0)
+    print(f"Using device: {device}\n")
+    
+    # Load CopernicusFM model
+    print("Loading CopernicusFM model...")
+    encoder = load_model(device)
+    print("✓ Model loaded\n")
+    
+    total_successful = 0
+    total_failed = 0
+    
+    # Process positive samples
+    pos_success, pos_fail = process_sample_type('positive', encoder, device)
+    total_successful += pos_success
+    total_failed += pos_fail
+    
+    # Process negative samples
+    neg_success, neg_fail = process_sample_type('negative', encoder, device)
+    total_successful += neg_success
+    total_failed += neg_fail
+    
+    # Final summary
     print(f"\n{'='*70}")
     print("Embedding generation complete!")
-    print(f"  ✓ Successfully processed: {successful_events} events")
-    print(f"  ✗ Failed: {failed_events} events")
-    print(f"  📁 Output directory: {embeddings_base_dir}")
-    
-    if successful_events > 0:
-        print("\nEmbeddings saved as:")
-        print("  - embedd_before.npy (before deforestation)")
-        print("  - embedd_after.npy (after deforestation)")
-        print("  - metadata.npy (event metadata)")
+    print(f"{'='*70}")
+    print(f"POSITIVE samples - ✓ Success: {pos_success}, ✗ Failed: {pos_fail}")
+    print(f"NEGATIVE samples - ✓ Success: {neg_success}, ✗ Failed: {neg_fail}")
+    print(f"TOTAL            - ✓ Success: {total_successful}, ✗ Failed: {total_failed}")
+    print(f"\nOutput: data/processed/embeddings/{{positive,negative}}/event_*/")
 
 if __name__ == "__main__":
     main()

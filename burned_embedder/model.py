@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
 from torchgeo.models import CopernicusFM_Base_Weights, copernicusfm_base
 from tqdm import tqdm
 
@@ -186,3 +187,6 @@ def process_embeddings_batched(encoder, da_s1, da_s2, timestamp_pairs, mode='com
     print(f"Final dataset: {len(embeddings_clean)} valid samples")
     
     return embeddings_clean, ndvi_clean, dates_clean
+
+
+

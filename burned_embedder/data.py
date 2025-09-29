@@ -32,7 +32,7 @@ def harmonize_s2_baseline(data):
     post_cutoff_mask = data.time >= np.datetime64(cutoff)
     
     if not post_cutoff_mask.any():
-        print("No post-baseline change data found, returning original data")
+        #print("No post-baseline change data found, returning original data")
         return data
     
     # Find which bands in our data need harmonization
@@ -40,10 +40,10 @@ def harmonize_s2_baseline(data):
     bands_to_process = [b for b in bands_to_harmonize if b in available_bands]
     
     if not bands_to_process:
-        print("No bands requiring harmonization found")
+      #  print("No bands requiring harmonization found")
         return data
     
-    print(f"Applying baseline harmonization to bands: {bands_to_process}")
+    # print(f"Applying baseline harmonization to bands: {bands_to_process}")
     
     # Create a copy to avoid modifying original data
     harmonized = data.copy()
@@ -62,10 +62,11 @@ def harmonize_s2_baseline(data):
     return harmonized
 
 
-def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31", edge_size=100):
+def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31", edge_size=128, verbose=False):
     """Load and clean Sentinel-1 data"""
 
-    print("Loading Sentinel-1 data...")
+    if verbose:
+        print("Loading Sentinel-1 data...")
     da_s1 = cubo.create(
         lat=lat, lon=lon,
         collection="sentinel-1-rtc",
@@ -79,15 +80,18 @@ def load_s1(lat, lon, start_date="2024-01-01", end_date="2025-12-31", edge_size=
     # Clean duplicates
     da_s1_clean = da_s1.drop_duplicates(dim='time', keep='first')
     
-    print(f"S1 data shape: {da_s1_clean.shape}")
+    if verbose:
+        print(f"S1 data shape: {da_s1_clean.shape}")
     
     return da_s1_clean
 
 def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B09","B11","B12"],
-            edge_size=100, max_cloud_cover=10):
+            edge_size=100, max_cloud_cover=10, verbose = False):
     """Load and clean Sentinel-2 data with automatic baseline correction"""
-    print("Loading Sentinel-2 data...")
-    
+
+    if verbose:
+        print("Loading Sentinel-2 data...")
+
     da_s2 = cubo.create(
         lat=lat, lon=lon,
         collection="sentinel-2-l2a",
@@ -103,7 +107,8 @@ def load_s2(lat, lon, start_date="2024-01-01", end_date="2025-12-31", bands=["B0
     # Apply baseline harmonization
     da_s2_harmonized = harmonize_s2_baseline(da_s2_clean)
 
-    print(f"S2 data shape: {da_s2_harmonized.shape}")
+    if verbose:
+        print(f"S2 data shape: {da_s2_harmonized.shape}")
 
     return da_s2_harmonized
 
@@ -199,17 +204,24 @@ def load_s1_filtered(lat, lon, start_date, end_date, deforest_start, deforest_en
     # Load all data first
     da_s1_full = load_s1(lat, lon, start_date, end_date, edge_size)
     
+    if da_s1_full is None or len(da_s1_full.time) == 0:
+        print(f"    Found {len(da_s1_full.time)} total S1 observations")
+        print(f"    Warning: No S1 data available in search window")
+        return None
+    
+    
     # Find closest observations
     timestamps = pd.to_datetime(da_s1_full.time.values)
     before_idx, after_idx = find_closest_observations(
         timestamps, deforest_start, deforest_end, n_before, n_after
     )
     
+    
     # Combine indices and select those observations
     selected_indices = np.concatenate([before_idx, after_idx])
     if len(selected_indices) > 0:
         da_s1_filtered = da_s1_full.isel(time=selected_indices)
-        return da_s1_filtered.sortby('time')  # Sort chronologically
+        return da_s1_filtered.sortby('time')
     else:
         print(f"    Warning: No suitable observations found")
         return None
@@ -251,30 +263,22 @@ def calculate_search_dates(earliest_alert, latest_alert, buffer_months=1):
 
 def clean_metadata_nc(da, metadata_dict=None):
     """Remove problematic coordinates and add metadata to NetCDF"""
-    # List of coordinates that typically cause serialization issues
-    problematic_coords = [
-        'sar:polarizations', 
-        'raster:bands',
-        'proj:centroid',
-        'description',
-        'title',
-        "proj:bbox",
-        "proj:shape",
-        "proj:transform"
-    ]
+    # Predefined sets of coordinates to drop for each satellite type
+    S1_COORDS_TO_DROP = {'sar:polarizations', 'raster:bands', 'description', 'title', "proj:centroid", 'proj:shape', 
+                         'proj:transform', 's1:shape', "proj:bbox"}
+    S2_COORDS_TO_DROP = {'title', 'proj:bbox', 'proj:shape', 'proj:transform', "proj:centroid"}
     
-    # Drop problematic coordinates
-    coords_to_drop = [coord for coord in problematic_coords if coord in da.coords]
-    
-    if coords_to_drop:
-        print(f"    Dropping problematic coordinates: {coords_to_drop}")
-        da_clean = da.drop_vars(coords_to_drop)
+    # Determine which set to use based on what coordinates exist
+    if 'sar:polarizations' in da.coords:
+        coords_to_drop = [coord for coord in S1_COORDS_TO_DROP if coord in da.coords]
     else:
-        da_clean = da
+        coords_to_drop = [coord for coord in S2_COORDS_TO_DROP if coord in da.coords]
+    
+    # Drop coordinates if any exist
+    da_clean = da.drop_vars(coords_to_drop) if coords_to_drop else da
     
     # Add metadata as attributes if provided
     if metadata_dict is not None:
-        for key, value in metadata_dict.items():
-            da_clean.attrs[key] = value
+        da_clean.attrs.update(metadata_dict)
     
     return da_clean

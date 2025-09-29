@@ -108,6 +108,10 @@ The project utilizes various data sources, including satellite imagery and groun
 └─────────────────────────────────────────┘
 ```
 
+## Main Results
+
+Visualizations of the main results can be found in reports/figures/validation. More Information and results will be uploaded via a presentation after the Hackathon Evaluation.
+
 ## Prerequisites
 
 - Python 3.8+ (we used and recommend 3.12)

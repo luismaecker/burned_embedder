@@ -5,15 +5,48 @@ from multiprocessing import Pool
 import os
 from pathlib import Path
 import random
-
 import geopandas as gpd
 import numpy as np
 import rasterio
 from shapely.geometry import Point
 from skimage.measure import label
+import rasterio
+from datetime import datetime, timedelta
+import rasterio.windows
 
-from burned_embedder.radd_processing import days_to_date, decode_radd_alerts, load_sample_data
 
+
+def days_to_date(days_since_dec31_2014):
+    """Convert days since Dec 31, 2014 to actual date"""
+    base_date = datetime(2014, 12, 31)
+    return base_date + timedelta(days=int(days_since_dec31_2014))
+
+
+def load_sample_data(input_path, window):
+    """Load raster data for a specific window"""
+    with rasterio.open(input_path) as src:
+        sample_data = src.read(1, window=window)
+        raster_transform = src.transform
+        crs = src.crs
+        profile = src.profile.copy()
+        window_transform = rasterio.windows.transform(window, raster_transform)
+    
+    return sample_data, window_transform, crs, profile
+
+
+def decode_radd_alerts(sample_data, confidence_level):
+    """Decode RADD alert data based on confidence level"""
+    valid_mask = sample_data > 0
+    first_digit = sample_data // 10000
+    
+    if confidence_level == 'high':
+        analysis_mask = (first_digit == 3) & valid_mask
+    elif confidence_level == 'low':
+        analysis_mask = (first_digit == 2) & valid_mask
+    else:
+        analysis_mask = valid_mask
+    
+    return valid_mask, analysis_mask
 
 def get_tif_files(folder_path):
     """Get all .tif files in a folder"""
@@ -307,6 +340,12 @@ def process_radd_raster_samples(input_path, min_area_pixels, confidence_level,
     # Setup
     tile_name = Path(input_path).stem
     tile_folder = os.path.join(output_folder, tile_name)
+    
+    # Skip if folder already exists
+    if os.path.exists(tile_folder):
+        print(f"Skipping {tile_name}: folder already exists")
+        return None
+    
     output_prefix = tile_name
     Path(tile_folder).mkdir(parents=True, exist_ok=True)
     
@@ -428,7 +467,7 @@ def process_multiple_rasters(input_folder, min_area_pixels, confidence_level,
 if __name__ == "__main__":
     
     # Configuration
-    MIN_AREA_PIXELS = 50
+    MIN_AREA_PIXELS = 100
     CONFIDENCE_LEVEL = 'high'
     OUTPUT_FOLDER = "data/interim/radd"
     N_SAMPLES = 40
@@ -437,9 +476,9 @@ if __name__ == "__main__":
     N_PROCESSES = 40
     
     # Choose mode
-    INPUT_RASTER_AF = "data/raw/radd/africa/00N_020E_radd_alerts.tif"
+    INPUT_FOLDER_AF = "data/raw/radd/africa"
     INPUT_FOLDER_SA = "data/raw/radd/south_america"
-    INPUT_RASTER_SEA = "data/raw/radd/southeast_asia/10N_100E_radd_alerts.tif"
+    INPUT_FOLDER_SEA = "data/raw/radd/southeast_asia"
 
     print(f"Output folder: {OUTPUT_FOLDER}")
     print(f"Samples per tile: {N_SAMPLES}")
@@ -449,8 +488,8 @@ if __name__ == "__main__":
     continent_results = {}
     
     # Process Africa
-    result_af = process_radd_raster_samples(
-        input_path=INPUT_RASTER_AF,
+    result_af = process_multiple_rasters(
+        input_folder=INPUT_FOLDER_AF,
         min_area_pixels=MIN_AREA_PIXELS,
         confidence_level=CONFIDENCE_LEVEL,
         n_samples=N_SAMPLES,
@@ -461,12 +500,15 @@ if __name__ == "__main__":
     )
         
     if result_af:
-        print(f"Complete: {result_af['successful_samples']} samples processed for {INPUT_RASTER_AF}")
-        continent_results['africa'] = result_af.get('component_features', [])
+        print(f"Complete: {len(result_af)} tiles processed for {INPUT_FOLDER_AF}")
+        all_af_features = []
+        for result in result_af:
+            all_af_features.extend(result.get('component_features', []))
+        continent_results['africa'] = all_af_features
 
     # Process Southeast Asia
-    result_sea = process_radd_raster_samples(
-        input_path=INPUT_RASTER_SEA,
+    result_sea = process_multiple_rasters(
+        input_folder=INPUT_FOLDER_SEA,
         min_area_pixels=MIN_AREA_PIXELS,
         confidence_level=CONFIDENCE_LEVEL,
         n_samples=N_SAMPLES,
@@ -475,29 +517,32 @@ if __name__ == "__main__":
         seed=SEED,
         n_processes=N_PROCESSES
     )
-        
+
     if result_sea:
-        print(f"Complete: {result_sea['successful_samples']} samples processed for {INPUT_RASTER_SEA}")
-        continent_results['southeast_asia'] = result_sea.get('component_features', [])
+        print(f"Complete: {len(result_sea)} tiles processed for {INPUT_FOLDER_SEA}")
+        all_sea_features = []
+        for result in result_sea:
+            all_sea_features.extend(result.get('component_features', []))
+        continent_results['southeast_asia'] = all_sea_features
     
     # # Process South America
-    # results_sa = process_multiple_rasters(
-    #     input_folder=INPUT_FOLDER_SA,
-    #     min_area_pixels=MIN_AREA_PIXELS,
-    #     confidence_level=CONFIDENCE_LEVEL,
-    #     n_samples=N_SAMPLES,
-    #     window_size=WINDOW_SIZE,
-    #     output_folder=OUTPUT_FOLDER,
-    #     seed=SEED,
-    #     n_processes=N_PROCESSES
-    # )
+    results_sa = process_multiple_rasters(
+        input_folder=INPUT_FOLDER_SA,
+        min_area_pixels=MIN_AREA_PIXELS,
+        confidence_level=CONFIDENCE_LEVEL,
+        n_samples=N_SAMPLES,
+        window_size=WINDOW_SIZE,
+        output_folder=OUTPUT_FOLDER,
+        seed=SEED,
+        n_processes=N_PROCESSES
+    )
     
-    # if results_sa:
-    #     print(f"Complete: {len(results_sa)} tiles processed for {INPUT_FOLDER_SA}")
-    #     all_sa_features = []
-    #     for result in results_sa:
-    #         all_sa_features.extend(result.get('component_features', []))
-    #     continent_results['south_america'] = all_sa_features
+    if results_sa:
+        print(f"Complete: {len(results_sa)} tiles processed for {INPUT_FOLDER_SA}")
+        all_sa_features = []
+        for result in results_sa:
+            all_sa_features.extend(result.get('component_features', []))
+        continent_results['south_america'] = all_sa_features
     
     # Create continent-level CSVs
     print("\nCreating continent-level CSV files...")
@@ -507,9 +552,8 @@ if __name__ == "__main__":
                 {'geometry': f['geometry'], **f['properties']} 
                 for f in features
             ])
-            
-            continent_csv = os.path.join(OUTPUT_FOLDER, f"{continent}_combined.csv")
-            continent_gdf.drop('geometry', axis=1).to_csv(continent_csv, index=False)
-            print(f"Created {continent_csv} with {len(features)} components")
-    
+            continent_parquet = os.path.join(OUTPUT_FOLDER, f"{continent}_combined.parquet")
+            continent_gdf.drop('geometry', axis=1).to_parquet(continent_parquet, index=False)
+            print(f"Created {continent_parquet} with {len(features)} components")
+
     print("\nAll processing complete!")

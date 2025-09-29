@@ -25,7 +25,6 @@ def initialize_gee():
 
 def find_radd_tile_for_event(lat, lon, tile_boundaries_file="data/raw/radd/Deforestation_alerts_(RADD).geojson"):
     """Find which RADD tile contains the given lat/lon coordinates using actual tile boundaries"""
-    # Load tile boundaries (cache this globally for efficiency)
     if not hasattr(find_radd_tile_for_event, '_tiles_gdf'):
         tiles_gdf = gpd.read_file(tile_boundaries_file)
         if tiles_gdf.crs is None:
@@ -34,15 +33,12 @@ def find_radd_tile_for_event(lat, lon, tile_boundaries_file="data/raw/radd/Defor
     
     tiles_gdf = find_radd_tile_for_event._tiles_gdf
     
-    # Create point in lat/lon (EPSG:4326)
     point = Point(lon, lat)
     point_gdf = gpd.GeoDataFrame([1], geometry=[point], crs='EPSG:4326')
     
-    # Transform point to same CRS as tile boundaries
     if tiles_gdf.crs != point_gdf.crs:
         point_gdf = point_gdf.to_crs(tiles_gdf.crs)
     
-    # Find intersecting tile
     point_geom = point_gdf.geometry.iloc[0]
     for idx, tile in tiles_gdf.iterrows():
         if tile.geometry.contains(point_geom):
@@ -62,7 +58,7 @@ def group_events_by_tile(deforest_df):
     
     return dict(tile_groups)
 
-def load_radd_tile_data(tile_id, radd_base_dir="data/raw/radd/south_america"):
+def load_radd_tile_data(tile_id, radd_base_dir):
     """Load RADD raster data for a specific tile"""
     radd_file = Path(radd_base_dir) / f"{tile_id}_radd_alerts.tif"
     
@@ -79,7 +75,7 @@ def load_radd_tile_data(tile_id, radd_base_dir="data/raw/radd/south_america"):
 def pixel_to_coordinates(row, col, transform):
     """Convert pixel coordinates to lat/lon"""
     x, y = rasterio.transform.xy(transform, row, col)
-    return y, x  # lat, lon
+    return y, x
 
 def coordinates_to_pixel(lat, lon, transform):
     """Convert lat/lon to pixel coordinates"""
@@ -134,7 +130,7 @@ def check_forest_cover_gee(lat, lon, date_str, forest_threshold=0.2):
     latest_image = dw.sort('system:time_start', False).first()
     forest_mask = latest_image.eq(1)
     
-    buffer_size = 1280  # meters
+    buffer_size = 1280
     buffer_region = point.buffer(buffer_size)
     
     forest_stats = forest_mask.reduceRegion(
@@ -208,8 +204,7 @@ def sample_negative_location_for_event(event_idx, event, radd_data, transform,
     
     return None
 
-def generate_negative_samples(deforest_df, output_file=None, 
-                             radd_base_dir="data/raw/radd/south_america"):
+def generate_negative_samples(deforest_df, output_file, radd_base_dir):
     """
     Generate negative samples for all deforestation events processing tile by tile
     
@@ -223,24 +218,19 @@ def generate_negative_samples(deforest_df, output_file=None,
     """
     print(f"Starting negative sample generation for {len(deforest_df)} events")
     
-    # Initialize GEE once
     initialize_gee()
     
-    # Group events by tile
     tile_groups = group_events_by_tile(deforest_df)
     print(f"Grouped events into {len(tile_groups)} tiles")
     
     negative_samples = []
     
-    # Process each tile
     for tile_idx, (tile_id, event_indices) in enumerate(tile_groups.items()):
         print(f"\nProcessing tile {tile_idx + 1}/{len(tile_groups)}: {tile_id} ({len(event_indices)} events)")
         
         try:
-            # Load tile data
             radd_data, transform, crs = load_radd_tile_data(tile_id, radd_base_dir)
             
-            # Process each event in this tile with progress bar
             for event_idx in tqdm(event_indices, desc=f"Events in {tile_id}", leave=False):
                 event = deforest_df.loc[event_idx]
                 
@@ -262,36 +252,76 @@ def generate_negative_samples(deforest_df, output_file=None,
     negative_samples_df = pd.DataFrame(negative_samples)
     
     if len(negative_samples_df) > 0:
-        # Convert to GeoDataFrame with EPSG:4326
         geometry = [Point(row['centroid_x'], row['centroid_y']) for _, row in negative_samples_df.iterrows()]
         negative_samples_gdf = gpd.GeoDataFrame(negative_samples_df, geometry=geometry, crs='EPSG:4326')
         
         print(f"\nGenerated {len(negative_samples_df)} negative samples")
         print(f"Success rate: {len(negative_samples_df) / len(deforest_df) * 100:.1f}%")
         
-        if output_file:
-            output_path = Path(output_file)
-            if output_path.suffix.lower() != '.parquet':
-                output_path = output_path.with_suffix('.parquet')
-            
-            negative_samples_gdf.to_parquet(output_path)
-            print(f"Saved to: {output_path}")
+        output_path = Path(output_file)
+        if output_path.suffix.lower() != '.parquet':
+            output_path = output_path.with_suffix('.parquet')
+        
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        negative_samples_gdf.to_parquet(output_path)
+        print(f"Saved to: {output_path}")
     else:
         print("No negative samples generated")
     
     return negative_samples_df
 
+
+def process_all_continents():
+    """Process all three continents for negative sample generation"""
+    
+    continents = {
+        # 'south_america': {
+        #     'input': root_path / "data/processed/radd/south_america_combined_clean.parquet",
+        #     'output': root_path / "data/processed/radd/south_america_negative_clean.parquet",
+        #     'radd_dir': root_path / "data/raw/radd/south_america"
+        # },
+        'africa': {
+            'input': root_path / "data/processed/radd/africa_combined_clean.parquet",
+            'output': root_path / "data/processed/radd/africa_negative_clean.parquet",
+            'radd_dir': root_path / "data/raw/radd/africa"
+        },
+        'southeast_asia': {
+            'input': root_path / "data/processed/radd/southeast_asia_combined_clean.parquet",
+            'output': root_path / "data/processed/radd/southeast_asia_negative_clean.parquet",
+            'radd_dir': root_path / "data/raw/radd/southeast_asia"
+        }
+    }
+    
+    results = {}
+    
+    for continent_name, paths in continents.items():
+        print(f"\n{'='*60}")
+        print(f"Processing {continent_name.replace('_', ' ').title()}")
+        print(f"{'='*60}")
+        
+        deforest_df = pd.read_parquet(paths['input'])
+        print(f"Loaded {len(deforest_df)} deforestation events")
+        
+        negative_samples_df = generate_negative_samples(
+            deforest_df,
+            output_file=paths['output'],
+            radd_base_dir=paths['radd_dir']
+        )
+
+
+        
+        results[continent_name] = negative_samples_df
+    
+    print(f"\n{'='*60}")
+    print("SUMMARY")
+    print(f"{'='*60}")
+    for continent, neg_df in results.items():
+        print(f"{continent.replace('_', ' ').title()}: {len(neg_df)} negative samples")
+    
+    return results
+
+
 if __name__ == '__main__':
-    # Load deforestation events
-    deforest_df = pd.read_parquet(root_path / "data/processed/radd/south_america_combined_clean_sampled_15.parquet")
-    print(f"Loaded {len(deforest_df)} deforestation events")
-    
-    # Generate negative samples sequentially
-    negative_samples_df = generate_negative_samples(
-        deforest_df,
-        output_file=root_path / "data/processed/radd/negative_samples_15_clean.parquet"
-    )
-
-
-    
-    print("Sequential negative sampling complete!")
+    print("Starting negative sample generation for all continents")
+    results = process_all_continents()
+    print("\nAll continents processed!")

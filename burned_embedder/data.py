@@ -5,6 +5,7 @@ import pandas as pd
 import datetime
 from datetime import timedelta
 
+
 def harmonize_s2_baseline(data):
     """
     Harmonize new Sentinel-2 data to the old baseline.
@@ -142,6 +143,26 @@ def find_closest_timestamps(s1_times, s2_times, max_diff_days=2):
 
 
 
+def calculate_duration_days(df, earliest_col='earliest_alert', latest_col='latest_alert'):
+    """
+    Calculate duration in days between earliest and latest alert dates.
+    
+    Args:
+        df: DataFrame containing date columns
+        earliest_col: Name of column containing earliest alert dates
+        latest_col: Name of column containing latest alert dates
+    
+    Returns:
+        Series with duration in days for each row
+    """
+    # Convert to datetime if they're strings
+    earliest = pd.to_datetime(df[earliest_col])
+    latest = pd.to_datetime(df[latest_col])
+    
+    # Calculate difference in days
+    duration_days = (latest - earliest).dt.days
+    
+    return duration_days
 
 
 def find_closest_observations(timestamps, deforest_start, deforest_end, n_before=1, n_after=1):

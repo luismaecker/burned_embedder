@@ -1,6 +1,7 @@
 import torch
 import logging
 
+
 def setup_device(gpu_index, memory_fraction=1.0):
     """Set up and return the appropriate device with memory limit."""
     # Set the device

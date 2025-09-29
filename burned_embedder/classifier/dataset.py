@@ -55,10 +55,10 @@ class DeforestationDataset(Dataset):
 
 
 
-def load_embedding_paths_and_labels(sample_type):
+def load_embedding_paths_and_labels(sample_type, continent="south_america"):
     """Load all embedding paths for a given sample type"""
-    embeddings_dir = root_path / "data" / "processed" / "embeddings" / sample_type
-    
+    embeddings_dir = root_path / "data" / "processed" / "embeddings" / continent / sample_type
+
     embedding_paths = []
     event_dirs = sorted([d for d in embeddings_dir.iterdir() if d.is_dir() and d.name.startswith('event_')])
     

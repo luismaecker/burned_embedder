@@ -166,7 +166,7 @@ The project utilizes various data sources, including satellite imagery and groun
 
 ## References
 
-We used a couple of frameworks, papers and methodologies as references for this project which are listed in our bibliography file.
+We used a couple of frameworks, papers and methodologies as references for this project which are listed in our bibliography file. Listed below are the key references for this project we wanted to highlight and acknowledge:
 
 - Wang, Y., Xiong, Z., Liu, C., Stewart, A. J., Dujardin, T., Bountos, N. I., ... & Zhu, X. X. (2025). Towards a Unified Copernicus Foundation Model for Earth Vision. arXiv preprint arXiv:2503.11849. https://arxiv.org/abs/2503.11849
 - Drusch, M., Del Bello, U., Carlier, S., Colin, O., Fernandez, V., Gascon, F., ... & Bargellini, P. (2012). Sentinel-2: ESA's optical high-resolution mission for GMES operational services. Remote Sensing of Environment, 120, 25-36. https://doi.org/10.1016/j.rse.2011.05.028
@@ -174,4 +174,3 @@ We used a couple of frameworks, papers and methodologies as references for this 
 - Reiche, J., Mullissa, A., Slagter, B., Gou, Y., Tsendbazar, N. E., Odongo-Braun, C., ... & Pickens, A. (2021). Forest disturbance alerts for the Congo Basin using Sentinel-1. Environmental Research Letters, 16(2), 024005. https://doi.org/10.1088/1748-9326/abd0a8
 - Brown, C. F., Brumby, S. P., Guzder-Williams, B., Birch, T., Hyde, S. B., Mazzariello, J., ... & Ilyushchenko, S. (2022). Dynamic World, Near real-time global 10 m land use land cover mapping. Scientific Data, 9(1), 251. https://doi.org/10.1038/s41597-022-01307-4
 - Gorelick, N., Hancher, M., Dixon, M., Ilyushchenko, S., Thau, D., & Moore, R. (2017). Google Earth Engine: Planetary-scale geospatial analysis for everyone. Remote Sensing of Environment, 202, 18-27. https://doi.org/10.1016/j.rse.2017.06.031
-

@@ -41,6 +41,7 @@ The project utilizes various data sources, including satellite imagery and groun
 
 ## Workflow
 
+```
 ┌─────────────────────────────────┐
 │      Data Acquisition           │
 │  • Sentinel-1 (Radar)           │
@@ -81,6 +82,7 @@ The project utilizes various data sources, including satellite imagery and groun
 │  • Calculate metrics            │
 │  • Create visualizations        │
 └─────────────────────────────────┘
+```
 
 ## Prerequisites
 

@@ -4,7 +4,7 @@
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
-Aligning EO FM Embeddings for Deforestated Area detection
+Using EO FM Embeddings for Deforestated Area detection
 
 ## Project Description
 

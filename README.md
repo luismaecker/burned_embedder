@@ -4,7 +4,7 @@
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
-Algining EO FM Embeddings for Burned Area detection
+Aligning EO FM Embeddings for Burned Area detection
 
 ## Project Description
 
@@ -25,10 +25,10 @@ The project utilizes various data sources, including satellite imagery and groun
 
 ## Key Features
 
-Foundation Model Alignment: Fine-tunes Copernicus-FM embeddings specifically for deforestation area detection
-Multi-Source Data Integration: Combines Sentinel-1 radar, Sentinel-2 optical imagery, and reference datasets
-Cloud-Resilient Detection: Utilizes radar data that works in all weather conditions
-Scalable Pipeline: Built with modern data science best practices using Cookiecutter template
+- Foundation Model Alignment: Fine-tunes Copernicus-FM embeddings specifically for deforestation area detection
+- Multi-Source Data Integration: Combines Sentinel-1 radar, Sentinel-2 optical imagery, and reference datasets
+- Cloud-Resilient Detection: Utilizes radar data that works in all weather conditions
+- Scalable Pipeline: Built with modern data science best practices using Cookiecutter template
 
 ## Use Cases
 
@@ -41,50 +41,50 @@ Scalable Pipeline: Built with modern data science best practices using Cookiecut
 
 ## Workflow
 
-┌─────────────────────────────┐
-                    │    Data Acquisition         │
-                    │  - Sentinel-1 (Radar)       │
-                    │  - Sentinel-2 (Optical)     │
-                    │  - RADD Alerts              │
-                    │  - Dynamic World LULC       │
-                    └──────────────┬──────────────┘
-                                   │
-                                   ▼
-                    ┌─────────────────────────────┐
-                    │   Data Preprocessing        │
-                    │  - Image alignment          │
-                    │  - Cloud masking            │
-                    │  - Temporal compositing     │
-                    │  - Label preparation        │
-                    └──────────────┬──────────────┘
-                                   │
-                                   ▼
-                    ┌─────────────────────────────┐
-                    │   Feature Extraction        │
-                    │  - Copernicus-FM embeddings │
-                    │  - Spatial features         │
-                    │  - Temporal features        │
-                    └──────────────┬──────────────┘
-                                   │
-                                   ▼
-                    ┌─────────────────────────────┐
-                    │    Model Training           │
-                    │  - Fine-tune embeddings     │
-                    │  - Train classifier         │
-                    │  - Validate results         │
-                    └──────────────┬──────────────┘
-                                   │
-                                   ▼
-                    ┌─────────────────────────────┐
-                    │  Inference & Evaluation     │
-                    │  - Generate predictions     │
-                    │  - Calculate metrics        │
-                    │  - Create visualizations    │
-                    └─────────────────────────────┘
+┌─────────────────────────────────┐
+│      Data Acquisition           │
+│  • Sentinel-1 (Radar)           │
+│  • Sentinel-2 (Optical)         │
+│  • RADD Alerts                  │
+│  • Dynamic World LULC           │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│     Data Preprocessing          │
+│  • Image alignment              │
+│  • Cloud masking                │
+│  • Temporal compositing         │
+│  • Label preparation            │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│     Feature Extraction          │
+│  • Copernicus-FM embeddings     │
+│  • Spatial features             │
+│  • Temporal features            │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│      Model Training             │
+│  • Fine-tune embeddings         │
+│  • Train classifier             │
+│  • Validate results             │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│   Inference & Evaluation        │
+│  • Generate predictions         │
+│  • Calculate metrics            │
+│  • Create visualizations        │
+└─────────────────────────────────┘
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.8+ (we used and recommend 3.12)
 - CUDA-compatible GPU (recommended for training)
 - Access to Microsoft Planetary Computer and Google Earth Engine
 

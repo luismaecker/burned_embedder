@@ -110,7 +110,7 @@ The project utilizes various data sources, including satellite imagery and groun
 
 ## Main Results
 
-Visualizations of the main results can be found in reports/figures/validation. More Information and results will be uploaded via a presentation after the Hackathon Evaluation.
+Visualizations of the main results can be found in 'reports/figures/validation', as well as in the notebook 'notebooks/main.ipynb'. More Information and results will be uploaded via a presentation after the Hackathon Evaluation.
 
 ## Prerequisites
 

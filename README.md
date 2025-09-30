@@ -13,9 +13,9 @@ Traditional deforestation detection methods often rely on optical imagery, which
 
 ## Gallery
 
-![South America](figures/examples_south_america.png)
-![Africa](figures/examples_africa.png)
-![South-East Asia](figures/examples_southeast_asia.png)
+![South America](reports/figures/examples_south_america.png)
+![Africa](reports/figures/examples_africa.png)
+![South-East Asia](reports/figures/examples_southeast_asia.png)
 
 ## Data Description
 

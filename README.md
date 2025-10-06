@@ -8,7 +8,9 @@ Using EO FM Embeddings for Deforestated Area detection
 
 ## Project Description
 
-*deforestation_embedder* is a machine learning project that leverages the Copernicus-FM foundation models to detect and map deforested areas from satellite imagery. The Copernicus Foundation Model is used to generate embeddings from Sentinel-1 radar data, which are then used for the specific task of deforestation detection within the accroding image chips.
+*deforestation_embedder* is a machine learning project that leverages the Copernicus-FM foundation models to detect deforested areas from satellite imagery. The Copernicus Foundation Model is used to generate embeddings from Sentinel-1 radar data, which are then used for the specific task of deforestation detection within the accroding image chips.
+
+The final product will be a pipeline where you input a time window and an area and you receive information if deforestation has occured in that area during that time window. Currently the project is in a prototypical stage and the main focus lies on the data processing, model training and evaluation. 
 
 
 ## Data Description
@@ -22,13 +24,6 @@ The project utilizes various data sources, including satellite imagery and groun
 | RADD               | Sentinel-1 derived "RAdar for Deforestation Alerts" | [Global Forest Watch](https://data.globalforestwatch.org/datasets/3c27123823a5461599fac9cb06862007_0/explore)        |
 | Dynamic World V1   | near real-time LULC Dataset, 10m resolution from World Resources Institute and Google  | [Google Earth Engine](https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_DYNAMICWORLD_V1#description)                |
 
-
-## Key Features
-
-
-## Use Cases
-
-- Deforestation monitoring
 
 
 ## Workflow
@@ -107,6 +102,7 @@ The project utilizes various data sources, including satellite imagery and groun
 Visualizations of the main results can be found in 'reports/figures/validation', as well as in the notebook 'notebooks/main.ipynb'. More Information and results will be uploaded via a presentation after the Hackathon Evaluation.
 
 
+
 ## Gallery
 
 ![South America](reports/figures/examples_south_america.png)
@@ -140,8 +136,6 @@ Visualizations of the main results can be found in 'reports/figures/validation',
 
 ```
 ├── LICENSE            <- Open-source license
-├── Makefile           <- Makefile with convenience commands like `make data` or `make train`
-├── README.md          <- The top-level README for developers using this project.
 ├── data
 │   ├── external       <- Data from third party sources.
 │   ├── interim        <- Intermediate data that has been transformed.
@@ -150,14 +144,10 @@ Visualizations of the main results can be found in 'reports/figures/validation',
 │
 ├── models             <- Trained and serialized models, model predictions, or model summaries
 │
-├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         followed by the name of what the notebook does, e.g.
-│                         `01_preprocessing`.
+├── notebooks          <- Jupyter notebooks.
 │
 ├── pyproject.toml     <- Project configuration file with package metadata for 
 │                         deforestation_embedder and configuration for tools like black
-│
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
 │
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │   └── figures        <- Generated graphics and figures to be used in reporting

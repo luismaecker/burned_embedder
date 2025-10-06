@@ -12,12 +12,13 @@ import sys
 root_path = rootutils.find_root()
 sys.path.append(str(root_path))
 
-from burned_embedder.classifier.dataset import create_datasets
-from burned_embedder.classifier.model import get_model
-from burned_embedder.classifier.model_utils import (
-    train_epoch, evaluate, EarlyStopping, print_metrics
+from deforestation_embedder.classifier.dataset import create_datasets
+from deforestation_embedder.classifier.model import get_model
+from deforestation_embedder.classifier.model_utils import (
+    train_model,
+    plot_training_history,
 )
-from burned_embedder.utils import setup_device
+from deforestation_embedder.utils import setup_device
 
 
 def set_seed(seed=42):

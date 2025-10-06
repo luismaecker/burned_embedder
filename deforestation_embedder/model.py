@@ -7,7 +7,7 @@ import torch.nn as nn
 from torchgeo.models import CopernicusFM_Base_Weights, copernicusfm_base
 from tqdm import tqdm
 
-from burned_embedder import config
+from deforestation_embedder import config
 
 
 def load_copFM(device):

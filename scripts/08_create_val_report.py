@@ -19,9 +19,9 @@ from sklearn.metrics import (
 root_path = rootutils.find_root()
 sys.path.append(str(root_path))
 
-from burned_embedder.classifier.dataset import load_embedding_paths_and_labels, DeforestationDataset
-from burned_embedder.classifier.model import get_model
-from burned_embedder.utils import setup_device
+from deforestation_embedder.classifier.dataset import load_embedding_paths_and_labels, DeforestationDataset
+from deforestation_embedder.classifier.model import get_model
+from deforestation_embedder.utils import setup_device
 
 
 def load_continent_dataset(continent_name, input_type='concat', batch_size=32):
@@ -799,7 +799,7 @@ def main():
     print(f"{'='*70}")
     
     # Test set - South America (from training)
-    from burned_embedder.classifier.dataset import create_datasets
+    from deforestation_embedder.classifier.dataset import create_datasets
     _, _, test_dataset = create_datasets(
         test_size=config['test_size'],
         val_split=config['val_split'],

@@ -4,8 +4,8 @@ import xarray as xr
 from tqdm import tqdm
 from pathlib import Path
 
-from burned_embedder import utils
-from burned_embedder.model import load_copFM, process_batch_unified
+from deforestation_embedder import utils
+from deforestation_embedder.model import load_copFM, process_batch_unified
 
 root_path = rootutils.find_root()
 

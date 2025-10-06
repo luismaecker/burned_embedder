@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 import shutil
 from pathlib import Path
-from burned_embedder.data import load_s1_filtered, clean_metadata_nc, load_s2, calculate_search_dates
+from deforestation_embedder.data import load_s1_filtered, clean_metadata_nc, load_s2, calculate_search_dates
 
 root_path = rootutils.find_root()
 

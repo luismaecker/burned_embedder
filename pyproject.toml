@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "burned_embedder"
+name = "deforestation_embedder"
 version = "0.0.1"
 description = "Algining EO FM Embeddings for Burned Area detection"
 authors = [
@@ -42,13 +42,13 @@ dependencies = [
 
 [tool.ruff]
 line-length = 99
-src = ["burned_embedder"]
-include = ["pyproject.toml", "burned_embedder/**/*.py"]
+src = ["deforestation_embedder"]
+include = ["pyproject.toml", "deforestation_embedder/**/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
 
 [tool.ruff.lint.isort]
-known-first-party = ["burned_embedder"]
+known-first-party = ["deforestation_embedder"]
 force-sort-within-sections = true
 

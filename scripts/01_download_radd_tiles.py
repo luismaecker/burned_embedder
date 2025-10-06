@@ -68,18 +68,21 @@ def download_radd_tiles(geojson_file_path, tile_configs, base_dir="data/raw/radd
 
 def list_available_tiles(geojson_file_path):
     """Show all available tile_ids"""
-    df = pd.read_csv(geojson_file_path)
-    print("Available tiles:")
-    for tile_id in sorted(df['tile_id'].tolist()):
-        print(f"  {tile_id}")
+    df = gpd.read_file(geojson_file_path)
     return df['tile_id'].tolist()
 
 if __name__ == "__main__":
-    csv_file = "data/raw/radd/Deforestation_alerts_(RADD).geojson"  # Can be downloaded from https://data.globalforestwatch.org/datasets/gfw::deforestation-alerts-radd/about
+    geojson_path = "data/raw/radd/Deforestation_alerts_(RADD).geojson"  # Can be downloaded from https://data.globalforestwatch.org/datasets/gfw::deforestation-alerts-radd/about
     
     # Uncomment to see available tiles
-    # list_available_tiles(csv_file)
-    
+    tiles = list_available_tiles(geojson_path)
+    print(f"\nTotal available tiles: {len(tiles)}")
+    print(tiles)
+
+    tile_configs = {
+        "all": tiles  # Download all tiles into one folder
+    }
+
     # Configure which tiles go to which folders
     tile_configs = {
         "south_america": [
@@ -88,15 +91,15 @@ if __name__ == "__main__":
             "00N_050W", "00N_060W", "00N_070W", "00N_080W",
             "10N_060W", "10N_070W", "10N_080W"
         ],
-        "africa": [
-            "00N_020E", "00N_010E"
-        ],
-        "southeast_asia": [
-            "10N_100E", "10N_110E",
-            "00N_130E", "00N_140E"
-        ]
+        # "africa": [
+        #     "00N_020E", "00N_010E"
+        # ],
+        # "southeast_asia": [
+        #     "10N_100E", "10N_110E",
+        #     "00N_130E", "00N_140E"
+        # ]
     }
     
     # Download the tiles
-    download_radd_tiles(csv_file, tile_configs)
+    download_radd_tiles(geojson_path, tile_configs)
     print("\nAll downloads complete!")

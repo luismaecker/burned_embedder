@@ -2,7 +2,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-PROJECT_NAME = burned_embedder
+PROJECT_NAME = deforestation_embedder
 PYTHON_VERSION = 3.12
 PYTHON_INTERPRETER = python
 
